@@ -10,6 +10,9 @@ import os
 from typing import Any, Dict, List, Optional
 import httpx
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from server.app.config import settings
 
 # Load configuration with defaults
@@ -17,7 +20,7 @@ MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "openvino").lower()
 OPENVINO_BASE_URL = os.getenv("OPENVINO_BASE_URL", "http://localhost:8000/v1")
 OPENVINO_MODEL = os.getenv("OPENVINO_MODEL", "Qwen/Qwen2.5-7B-Instruct")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 
 def call_openvino(
