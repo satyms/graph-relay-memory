@@ -61,13 +61,19 @@ def authenticate_bearer(header_val: Optional[str]) -> Tuple[Optional[AuthContext
     return authenticate_key(header_val)
 
 
+import hmac
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def verify_admin_token(token: Optional[str]) -> bool:
-    """Validate administrative secret token."""
-    if not token:
+    """Validate administrative secret token using constant-time comparison."""
+    if not token or not settings.admin_token:
         return False
     parts = token.strip().split()
     candidate = parts[1] if (len(parts) == 2 and parts[0].lower() == "bearer") else token.strip()
-    return candidate == settings.admin_token
+    return hmac.compare_digest(candidate.encode("utf-8"), settings.admin_token.encode("utf-8"))
 
 
 def log_audit(
@@ -97,7 +103,7 @@ def log_audit(
             ok=ok,
             error_code=error_code
         )
-    except Exception:
-        # Audit failure must not crash the operational path, but is recorded
-        pass
+    except Exception as exc:
+        logger.exception("Audit write failed: audit_id=%s tool=%s tenant=%s error=%s", audit_id, tool, t_id, exc)
     return audit_id
+
