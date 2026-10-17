@@ -52,6 +52,9 @@ def log_event_handler(
         )
         log_audit(tool="log_event", ok=True, auth_context=ctx)
         return {"ok": True, **res}
+    except LookupError as e:
+        log_audit(tool="log_event", ok=False, error_code="NOT_FOUND", auth_context=ctx)
+        return {"ok": False, "error": {"code": "NOT_FOUND", "message": str(e)}}
     except Exception as e:
         log_audit(tool="log_event", ok=False, error_code="UNAVAILABLE", auth_context=ctx)
         return {"ok": False, "error": {"code": "UNAVAILABLE", "message": str(e)}}

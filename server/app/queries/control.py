@@ -115,32 +115,21 @@ def record_audit_entry(
     error_code: Optional[str]
 ) -> str:
     """Record an audit entry for a tool or auth invocation."""
-    if tenant_id:
-        cypher = """
-        MATCH (t:Tenant {id: $tenant_id})
-        CREATE (a:AuditEntry {
-            id: $audit_id,
-            ts: $ts,
-            agent_id: $agent_id,
-            tool: $tool,
-            ok: $ok,
-            error_code: $error_code
-        })
-        CREATE (a)-[:ABOUT]->(t)
-        RETURN a.id AS id
-        """
-    else:
-        cypher = """
-        CREATE (a:AuditEntry {
-            id: $audit_id,
-            ts: $ts,
-            agent_id: $agent_id,
-            tool: $tool,
-            ok: $ok,
-            error_code: $error_code
-        })
-        RETURN a.id AS id
-        """
+    cypher = """
+    CREATE (a:AuditEntry {
+        id: $audit_id,
+        ts: $ts,
+        agent_id: $agent_id,
+        tenant_id: $tenant_id,
+        tool: $tool,
+        ok: $ok,
+        error_code: $error_code
+    })
+    WITH a
+    OPTIONAL MATCH (t:Tenant {id: $tenant_id})
+    FOREACH (_ IN CASE WHEN t IS NULL THEN [] ELSE [1] END | CREATE (a)-[:ABOUT]->(t))
+    RETURN a.id AS id
+    """
     res = execute_query(CONTROL_GRAPH, cypher, {
         "audit_id": audit_id,
         "ts": ts,

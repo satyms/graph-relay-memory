@@ -91,13 +91,12 @@ def log_event(
     res_seq = execute_query(graph_name, seq_cypher, {"session_id": session_id})
     seq = (res_seq.result_set[0][0] + 1) if res_seq and res_seq.result_set else 1
 
-    # Insert or retrieve existing event by idempotency key
+    # Insert or retrieve existing event scoped to session by idempotency key
     cypher = """
     MATCH (s:Session {id: $session_id})
-    MERGE (e:Event {idem_key: $idem_key})
+    MERGE (s)-[:HAS_EVENT]->(e:Event {idem_key: $idem_key})
     ON CREATE SET e.id = $event_id, e.type = $event_type, e.summary = $summary,
                   e.payload = $payload, e.ts = $now, e.seq = $seq
-    MERGE (s)-[:HAS_EVENT]->(e)
     RETURN e.id AS id, e.seq AS seq
     """
     res = execute_query(graph_name, cypher, {
@@ -110,6 +109,8 @@ def log_event(
         "now": now,
         "seq": seq
     })
+    if not res or not res.result_set:
+        raise LookupError(f"session {session_id} not found")
     actual_id = res.result_set[0][0]
     actual_seq = res.result_set[0][1]
 

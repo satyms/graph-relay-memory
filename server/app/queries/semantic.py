@@ -35,12 +35,41 @@ def upsert_fact(
     """
     execute_query(graph_name, ent_cypher, {"entity_name": entity_name, "ent_id": ent_id, "now": now})
 
-    # Close currently active fact for this predicate (if any) and create new active fact
-    cypher_step1 = """
-    MATCH (e:Entity {name: $entity_name})
-    OPTIONAL MATCH (e)-[:HAS_FACT]->(old:Fact {predicate: $predicate})
+    # If idempotency_key is provided and already exists for this entity & predicate, return it
+    if idempotency_key:
+        check_cypher = """
+        MATCH (e:Entity {name: $entity_name})-[:HAS_FACT]->(f:Fact {idem_key: $idem_key, predicate: $predicate})
+        OPTIONAL MATCH (f)-[:SUPERSEDES]->(old:Fact)
+        RETURN f.id AS fact_id, old.id AS old_id
+        """
+        existing = execute_query(graph_name, check_cypher, {
+            "entity_name": entity_name,
+            "predicate": predicate,
+            "idem_key": idempotency_key
+        })
+        if existing and existing.result_set:
+            return {
+                "fact_id": existing.result_set[0][0],
+                "superseded_fact_id": existing.result_set[0][1]
+            }
+
+    # Step 1: Close currently active fact for this predicate (if any)
+    cypher_close = """
+    MATCH (e:Entity {name: $entity_name})-[:HAS_FACT]->(old:Fact {predicate: $predicate})
     WHERE old.valid_to IS NULL
     SET old.valid_to = $now, old.status = 'closed'
+    RETURN old.id AS old_id
+    """
+    res_close = execute_query(graph_name, cypher_close, {
+        "entity_name": entity_name,
+        "predicate": predicate,
+        "now": now
+    })
+    old_fact_id = res_close.result_set[0][0] if (res_close and res_close.result_set) else None
+
+    # Step 2: Create new active fact
+    cypher_create = """
+    MATCH (e:Entity {name: $entity_name})
     CREATE (e)-[:HAS_FACT]->(new:Fact {
         id: $fact_id,
         predicate: $predicate,
@@ -53,9 +82,9 @@ def upsert_fact(
         owner_agent: $agent_id,
         idem_key: $idem_key
     })
-    RETURN new.id AS id, old.id AS old_id
+    RETURN new.id AS id
     """
-    res1 = execute_query(graph_name, cypher_step1, {
+    execute_query(graph_name, cypher_create, {
         "entity_name": entity_name,
         "predicate": predicate,
         "value": str(value),
@@ -66,10 +95,6 @@ def upsert_fact(
         "now": now,
         "idem_key": idempotency_key or fact_id
     })
-    
-    old_fact_id = None
-    if res1 and res1.result_set:
-        old_fact_id = res1.result_set[0][1]
 
     # Link SUPERSEDES relationship if an older fact was closed
     if old_fact_id:
@@ -181,10 +206,11 @@ def fact_history(graph_name: str, entity: str, predicate: str) -> List[Dict[str,
 
 
 def forget_fact(graph_name: str, fact_id: str, reason: str) -> bool:
-    """Soft-close a fact. History is preserved."""
+    """Soft-close an active fact. History is preserved."""
     now = int(time.time() * 1000)
     cypher = """
     MATCH (f:Fact {id: $fact_id})
+    WHERE f.valid_to IS NULL
     SET f.valid_to = $now, f.status = 'closed', f.forget_reason = $reason
     RETURN f.id
     """

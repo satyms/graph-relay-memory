@@ -38,7 +38,13 @@ def setup_tenants():
 def test_tenancy_graph_naming():
     assert get_tenant_graph_name("acme") == "tenant_acme"
     assert get_tenant_graph_name("globex") == "tenant_globex"
-    assert get_tenant_graph_name("tenant/evil;drop") == "tenant_tenantevildrop"
+    assert get_tenant_graph_name("team_core-1") == "tenant_team_core-1"
+    with pytest.raises(ValueError):
+        get_tenant_graph_name("tenant/evil;drop")
+    with pytest.raises(ValueError):
+        get_tenant_graph_name("")
+    with pytest.raises(ValueError):
+        get_tenant_graph_name("acme.prod")
 
 
 def test_tenant_creation_and_isolation(setup_tenants):
@@ -145,8 +151,10 @@ def test_audit_logging(setup_tenants):
     assert res.result_set[0][2] is True
 
 
-def test_admin_token_verification():
-    assert verify_admin_token("relay-admin-secret-dev-token") is True
-    assert verify_admin_token("Bearer relay-admin-secret-dev-token") is True
+def test_admin_token_verification(monkeypatch):
+    from server.app.config import settings
+    monkeypatch.setattr(settings, "admin_token", "test-secret-token")
+    assert verify_admin_token("test-secret-token") is True
+    assert verify_admin_token("Bearer test-secret-token") is True
     assert verify_admin_token("wrong_token") is False
     assert verify_admin_token(None) is False

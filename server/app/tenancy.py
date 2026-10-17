@@ -18,14 +18,19 @@ def hash_key(raw_key: str) -> str:
     return hashlib.sha256(raw_key.strip().encode("utf-8")).hexdigest()
 
 
+import re
+
+_TENANT_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
 def get_tenant_graph_name(tenant_id: str) -> str:
     """
     Format the isolated graph name for a given tenant.
     Never accepts user override; strictly enforced as tenant_<id>.
     """
-    # Sanitize tenant_id to allow alphanumeric and underscores
-    clean_id = "".join(c for c in tenant_id if c.isalnum() or c in ("_", "-"))
-    return f"tenant_{clean_id}"
+    if not tenant_id or not isinstance(tenant_id, str) or not _TENANT_ID_RE.fullmatch(tenant_id):
+        raise ValueError(f"invalid tenant_id: {tenant_id!r}")
+    return f"tenant_{tenant_id}"
 
 
 def provision_tenant(tenant_id: str, name: str) -> Dict[str, Any]:
@@ -33,6 +38,7 @@ def provision_tenant(tenant_id: str, name: str) -> Dict[str, Any]:
     Create tenant in control graph, initialize tenant graph with indexes.
     Returns tenant descriptor.
     """
+    graph_name = get_tenant_graph_name(tenant_id)
     control_queries.init_control_schema()
     now = int(time.time() * 1000)
     
@@ -40,7 +46,6 @@ def provision_tenant(tenant_id: str, name: str) -> Dict[str, Any]:
     tenant = control_queries.create_tenant(tenant_id=tenant_id, name=name, created_at=now)
     
     # 2. Provision and index the tenant's individual graph
-    graph_name = get_tenant_graph_name(tenant_id)
     schema_queries.init_tenant_schema(graph_name, created_at=now)
     
     return {
@@ -60,11 +65,14 @@ def provision_agent_key(tenant_id: str, agent_id: str, role: str) -> Tuple[str, 
     key_h = hash_key(raw_key)
     now = int(time.time() * 1000)
     
-    control_queries.create_api_key(
+    created = control_queries.create_api_key(
         key_hash=key_h,
         tenant_id=tenant_id,
         agent_id=agent_id,
         role=role,
         created_at=now
     )
+    if not created:
+        raise ValueError(f"tenant {tenant_id!r} does not exist")
     return raw_key, key_h
+
