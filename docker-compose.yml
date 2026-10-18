@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  falkordb:
+    image: falkordb/falkordb:latest
+    container_name: falkordb-relay
+    ports:
+      - "6379:6379"
+    volumes:
+      - falkordb-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  relay-server:
+    build: .
+    container_name: relay-memory-server
+    ports:
+      - "8080:8080"
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+      - ADMIN_TOKEN=relay-admin-secret-dev-token
+      - MODEL_PROVIDER=openvino
+      - OPENVINO_BASE_URL=http://host.docker.internal:8000/v1
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  falkordb-data:

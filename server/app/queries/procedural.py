@@ -175,9 +175,9 @@ def find_procedure(
         for p in procs_map.values():
             trig_lower = p["trigger"].lower()
             name_lower = p["name"].lower()
-            # Match if any token is contained in trigger or name
-            match = any(w in trig_lower or w in name_lower for w in words) if words else True
-            if match:
+            match_count = sum(1 for w in words if (w in trig_lower or w in name_lower)) if words else 0
+            if not words or match_count > 0:
+                p["relevance"] = match_count
                 results.append(p)
         return results
 
@@ -190,7 +190,7 @@ def find_procedure(
         shared_procs = [p for p in all_shared if p["name"] not in seen_names]
 
     combined = tenant_procs + shared_procs
-    combined.sort(key=lambda x: x["score"], reverse=True)
+    combined.sort(key=lambda x: (x["score"], x.get("relevance", 0)), reverse=True)
     return combined[:safe_limit]
 
 
@@ -299,18 +299,16 @@ def record_outcome(
         # New version starts with 0 successes, 0 failures, status 'active'
         cypher_fork = """
         MATCH (old:Procedure {id: $old_id})
-        CREATE (new:Procedure {
-            id: $new_id,
-            name: $name,
-            trigger: $trigger,
-            version: $new_ver,
-            status: 'active',
-            success_count: 0,
-            fail_count: 0,
-            preconditions: $preconds,
-            forked_from_assumption: $violated_assumption
-        })
-        CREATE (new)-[:PREVIOUS_VERSION]->(old)
+        MERGE (new:Procedure {id: $new_id})
+        SET new.name = $name,
+            new.trigger = $trigger,
+            new.version = $new_ver,
+            new.status = 'active',
+            new.success_count = 0,
+            new.fail_count = 0,
+            new.preconditions = $preconds,
+            new.forked_from_assumption = $violated_assumption
+        MERGE (new)-[:PREVIOUS_VERSION]->(old)
         RETURN new.id
         """
         execute_query(graph_name, cypher_fork, {
@@ -328,8 +326,9 @@ def record_outcome(
             sid = f"{new_proc_id}_step_{idx}"
             execute_query(graph_name, """
             MATCH (p:Procedure {id: $pid})
-            CREATE (s:Step {id: $sid, idx: $idx, text: $text})
-            CREATE (p)-[:HAS_STEP]->(s)
+            MERGE (s:Step {id: $sid})
+            SET s.idx = $idx, s.text = $text
+            MERGE (p)-[:HAS_STEP]->(s)
             """, {"pid": new_proc_id, "sid": sid, "idx": idx, "text": step_text})
 
     return {
@@ -383,7 +382,7 @@ def get_procedure(
     if include_history:
         hist_cypher = """
         MATCH (current:Procedure {id: $pid})-[:PREVIOUS_VERSION*1..5]->(prev:Procedure)
-        RETURN prev.id, prev.version, prev.status, prev.fail_count, prev.violated_assumption
+        RETURN DISTINCT prev.id, prev.version, prev.status, prev.fail_count, prev.violated_assumption
         ORDER BY prev.version DESC
         """
         h_res = execute_ro_query(graph_name, hist_cypher, {"pid": procedure_id})
