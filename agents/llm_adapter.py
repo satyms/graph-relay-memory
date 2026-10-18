@@ -27,7 +27,7 @@ def call_openvino(
     system_prompt: str,
     messages: List[Dict[str, Any]],
     tools: Optional[List[Dict[str, Any]]] = None,
-    timeout: float = 30.0
+    timeout: float = 120.0
 ) -> Dict[str, Any]:
     """
     Call local OpenVINO model (e.g. Qwen2.5-7B-Instruct INT4 served via vLLM / llama.cpp / openvino-genai-server)
