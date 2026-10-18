@@ -254,8 +254,57 @@ TOOL_DEFINITIONS = [
                 "required": ["procedure_id", "incident_id", "success"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "blast_radius",
+            "description": "Calculate impacted upstream services if a service fails via graph traversal.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "service": {"type": "string"},
+                    "depth": {"type": "integer"}
+                },
+                "required": ["service"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "rank_critical_services",
+            "description": "Rank services by topological criticality using PageRank.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "explain",
+            "description": "Retrieve full provenance chain from a fact, hypothesis, or task back to its root sources.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "node_id": {"type": "string"}
+                },
+                "required": ["node_id"]
+            }
+        }
     }
 ]
+
+
+from server.app.tools.insight import (
+    blast_radius_handler,
+    rank_critical_services_handler,
+    explain_handler
+)
 
 
 def dispatch_tool_call(ctx: AuthContext, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -274,7 +323,10 @@ def dispatch_tool_call(ctx: AuthContext, name: str, args: Dict[str, Any]) -> Dic
         "create_handoff": lambda: create_handoff_handler(ctx, **args),
         "accept_handoff": lambda: accept_handoff_handler(ctx, **args),
         "find_procedure": lambda: find_procedure_handler(ctx, **args),
-        "record_outcome": lambda: record_outcome_handler(ctx, **args)
+        "record_outcome": lambda: record_outcome_handler(ctx, **args),
+        "blast_radius": lambda: blast_radius_handler(ctx, **args),
+        "rank_critical_services": lambda: rank_critical_services_handler(ctx, **args),
+        "explain": lambda: explain_handler(ctx, **args)
     }
     if name not in dispatch:
         return {"ok": False, "error": f"Unknown tool: {name}"}
