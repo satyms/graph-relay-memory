@@ -69,7 +69,8 @@ def create_task(
         CREATE (t:Task {
             id: $id, title: $title, status: 'open',
             created_by: $agent_id, priority: $priority,
-            created_at: $now, lease_expires_at: null, claimed_by: null
+            created_at: $now, lease_expires_at: null, claimed_by: null,
+            version: 1
         })
         """,
         {"id": task_id, "title": title, "agent_id": agent_id,
@@ -135,14 +136,16 @@ def claim_task(graph_name: str, task_id: str, agent_id: str, ttl_ms: int = DEFAU
         """
         MATCH (t:Task {id: $task_id})
         WHERE t.status = 'open' AND t.claimed_by IS NULL
-        SET t.status = 'in_progress', t.claimed_by = $agent_id, t.lease_expires_at = $expires
-        RETURN t.id
+        SET t.status = 'in_progress', t.claimed_by = $agent_id, t.lease_expires_at = $expires,
+            t.version = COALESCE(t.version, 0) + 1
+        RETURN t.id, t.version
         """,
         {"task_id": task_id, "agent_id": agent_id, "expires": expires},
     )
 
     if res and res.result_set:
-        return {"ok": True, "task_id": task_id, "lease_expires_at": expires}
+        ver = res.result_set[0][1] if len(res.result_set[0]) > 1 else 1
+        return {"ok": True, "task_id": task_id, "lease_expires_at": expires, "version": ver}
 
     # Check if task exists at all
     check = execute_ro_query(
@@ -244,20 +247,29 @@ def reap_expired_leases(graph_name: str) -> int:
     Re-open tasks whose lease_expires_at is in the past.
     Returns count of reaped tasks.
     """
+    reaped = reap_expired_leases_detailed(graph_name)
+    return len(reaped)
+
+
+def reap_expired_leases_detailed(graph_name: str) -> List[Dict[str, Any]]:
+    """
+    Re-open tasks whose lease_expires_at is in the past and return their details.
+    """
     now = int(time.time() * 1000)
     res = execute_query(
         graph_name,
         """
         MATCH (t:Task {status: 'in_progress'})
         WHERE t.lease_expires_at IS NOT NULL AND t.lease_expires_at < $now
-        SET t.status = 'open', t.claimed_by = null, t.lease_expires_at = null
-        RETURN count(t)
+        SET t.status = 'open', t.claimed_by = null, t.lease_expires_at = null,
+            t.version = COALESCE(t.version, 0) + 1
+        RETURN t.id, t.title, t.version
         """,
         {"now": now},
     )
     if res and res.result_set:
-        return res.result_set[0][0]
-    return 0
+        return [{"task_id": r[0], "title": r[1], "version": r[2]} for r in res.result_set]
+    return []
 
 
 # ─────────────────────── Hypotheses ───────────────────────
@@ -374,3 +386,30 @@ def accept_handoff(
         "task_id": row[2],
         "context_summary": row[3],
     }
+
+
+def get_agent_tasks(graph_name: str, agent_id: str) -> List[Dict[str, Any]]:
+    """
+    Get all in-progress tasks currently claimed by the specified agent.
+    Returns list of dicts with task_id, title, status, and lease_expires_at.
+    """
+    res = execute_ro_query(
+        graph_name,
+        """
+        MATCH (t:Task {status: 'in_progress', claimed_by: $agent_id})
+        RETURN t.id, t.title, t.status, t.lease_expires_at, t.version
+        """,
+        {"agent_id": agent_id},
+    )
+    if not (res and res.result_set):
+        return []
+    return [
+        {
+            "task_id": r[0],
+            "title": r[1],
+            "status": r[2],
+            "lease_expires_at": r[3],
+            "version": r[4] or 1
+        }
+        for r in res.result_set
+    ]

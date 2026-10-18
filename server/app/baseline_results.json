@@ -1,0 +1,61 @@
+{
+  "timestamp": 1792305973666,
+  "summary": {
+    "concurrency": {
+      "check": "20 workers race for 10 tasks (duplicate claims)",
+      "relay": "0 duplicate claims",
+      "baseline": "144 duplicate claims",
+      "verdict": "Relay atomic CAS prevents duplicates; Baseline suffers race conditions"
+    },
+    "correction": {
+      "check": "Owner fact corrected from Team Core to Team Billing (as_of time travel)",
+      "relay": "Earlier: Team Core, Current: Team Billing",
+      "baseline": "Earlier: Team Billing, Current: Team Billing",
+      "verdict": "Relay preserves temporal truth via SUPERSEDES; Baseline overwrites past memory"
+    },
+    "isolation": {
+      "check": "Tenant A attempts to read Tenant B private facts",
+      "relay": "0 records leaked",
+      "baseline": "1 records accessible",
+      "verdict": "Relay enforces FalkorDB graph-per-tenant isolation; Flat memory coexists in shared process"
+    }
+  },
+  "details": {
+    "concurrency": {
+      "relay": {
+        "tasks_offered": 10,
+        "tasks_claimed": 10,
+        "duplicate_claims": 0,
+        "safe": true
+      },
+      "baseline": {
+        "tasks_offered": 10,
+        "tasks_claimed": 10,
+        "duplicate_claims": 144,
+        "safe": false
+      }
+    },
+    "correction": {
+      "relay": {
+        "earlier_as_of": "Team Core",
+        "current": "Team Billing",
+        "preserves_history": true
+      },
+      "baseline": {
+        "earlier_as_of": "Team Billing",
+        "current": "Team Billing",
+        "preserves_history": false
+      }
+    },
+    "isolation": {
+      "relay": {
+        "cross_tenant_records_found": 0,
+        "isolated": true
+      },
+      "baseline": {
+        "cross_tenant_records_found": 1,
+        "isolated": false
+      }
+    }
+  }
+}

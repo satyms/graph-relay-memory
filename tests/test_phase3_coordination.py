@@ -27,7 +27,7 @@ from server.app.queries.episodic import start_session, log_event
 
 @pytest.fixture(scope="module")
 def coord_fixture():
-    suffix = "cd01"
+    suffix = f"cd_{int(time.time() * 1000)}"
     provision_tenant(f"coord_acme_{suffix}", "Acme Corp")
     provision_tenant(f"coord_globex_{suffix}", "Globex Corp")
 

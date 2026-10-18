@@ -54,6 +54,7 @@ Relationships: `(ApiKey)-[:BELONGS_TO]->(Tenant)`, `(AuditEntry)-[:ABOUT]->(Tena
 | `Hypothesis` | `id`, `text`, `confidence`, `status` (`proposed`, `supported`, `rejected`) |
 | `Evidence` | `id`, `summary`, `ref`, `ts` |
 | `Handoff` | `id`, `from_agent`, `to_agent`, `status` (`pending`, `accepted`, `declined`), `context_summary`, `open_questions`, `created_at`, `accepted_at` |
+| `Approval` | `id`, `action`, `target`, `requested_by`, `status` (`pending`, `approved`, `rejected`), `reason`, `requested_at`, `decided_at`, `decided_by` |
 
 ## 4. Tenant graph: relationships
 
@@ -79,6 +80,7 @@ Relationships: `(ApiKey)-[:BELONGS_TO]->(Tenant)`, `(AuditEntry)-[:ABOUT]->(Tena
 | `CREATED` | Agent -> Handoff | Who handed off |
 | `TO` | Handoff -> Agent | Who receives it |
 | `CARRIES` | Handoff -> Hypothesis / Evidence / Task | What is being passed |
+| `REQUIRES` | Task -> Approval | Human-in-the-loop safety gate for risky actions |
 
 ## 5. Indexes
 
@@ -91,6 +93,7 @@ CREATE INDEX FOR (f:Fact) ON (f.id)
 CREATE INDEX FOR (ev:Event) ON (ev.idem_key)
 CREATE INDEX FOR (p:Procedure) ON (p.id)
 CREATE INDEX FOR (h:Handoff) ON (h.id)
+CREATE INDEX FOR (a:Approval) ON (a.id)
 ```
 
 Full-text (verify procedure names): index `Event.summary`, `Fact.value`, `Procedure.trigger`.
@@ -257,6 +260,44 @@ MATCH path = (f:Fact {id: $fact_id})-[:SUPERSEDES|DERIVED_FROM*1..4]->(src)
 RETURN path
 ```
 
+### 6.14 Approval gate for risky actions
+
+Request approval linked to a task:
+```cypher
+MATCH (t:Task {id: $task_id})
+CREATE (a:Approval {
+    id: $approval_id,
+    action: $action,
+    target: $target,
+    requested_by: $requested_by,
+    justification: $justification,
+    status: 'pending',
+    reason: '',
+    requested_at: $now,
+    decided_at: null,
+    decided_by: null
+})
+CREATE (t)-[:REQUIRES]->(a)
+RETURN a.id AS id
+```
+
+Decide approval (admin):
+```cypher
+MATCH (a:Approval {id: $approval_id})
+SET a.status = $decision,
+    a.reason = $reason,
+    a.decided_at = $now,
+    a.decided_by = $decided_by
+RETURN a.id AS id, a.status AS status
+```
+
+Check if task is approved for risky action before completion:
+```cypher
+MATCH (t:Task {id: $task_id})-[:REQUIRES]->(a:Approval)
+WHERE a.action = $action AND a.status = 'approved'
+RETURN count(a) > 0 AS approved
+```
+
 ## 7. Example subgraph (demo)
 
 ```
@@ -266,4 +307,6 @@ RETURN path
 (Incident INC-1)-HAS_HYPOTHESIS->(H1)-SUPPORTED_BY->(Evidence e1)
 (Agent triage)-CREATED->(Handoff)-TO->(Agent investigator)
 (Procedure restart-redis v2)-PREVIOUS_VERSION->(Procedure restart-redis v1)
+(Task rollback-t1)-REQUIRES->(Approval status="approved" action="rollback_deploy")
 ```
+

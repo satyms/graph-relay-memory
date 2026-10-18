@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     openvino_base_url: str = "http://localhost:8000/v1"
     server_port: int = 8080
+    demo_mode: bool = True
+    chaos_lease_seconds: int = 10
 
     model_config = SettingsConfigDict(
         env_file=".env",

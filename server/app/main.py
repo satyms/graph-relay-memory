@@ -13,15 +13,18 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Header, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
+from server.app.auth import verify_admin_token, AuthContext
 from server.app.graph import execute_ro_query, execute_query
 from server.app.tenancy import get_tenant_graph_name
 from server.app.queries.semantic import query_facts
-from server.app.queries.coordination import list_open_work
+from server.app.queries.coordination import list_open_work, get_agent_tasks, claim_task
+from server.app.tools.episodic import log_event_handler
 from server.app.reaper import run_reaper
 from agents.scenario import run_full_incident_scenario
 
@@ -46,10 +49,15 @@ async def _reaper_background_loop():
     """Background lease reaper sweeping expired task leases."""
     while True:
         try:
-            run_reaper(["tenant_acme"])
+            from server.app.reaper import run_reaper_detailed
+            reaped_map = run_reaper_detailed(["tenant_acme"])
+            for gn, tasks in reaped_map.items():
+                for t in tasks:
+                    broadcast_event("lease_expired", {"graph_name": gn, "task_id": t["task_id"], "title": t.get("title")})
+                    broadcast_event("task_reopened", {"graph_name": gn, "task_id": t["task_id"], "version": t.get("version")})
         except Exception:
             pass
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
 
 
 @asynccontextmanager
@@ -84,7 +92,7 @@ def _determine_memory_type(labels: List[str]) -> str:
         return "semantic"
     if "Procedure" in lbl_set or "Step" in lbl_set or "Outcome" in lbl_set:
         return "procedural"
-    if any(l in lbl_set for l in ("Incident", "Task", "Hypothesis", "Handoff")):
+    if any(l in lbl_set for l in ("Incident", "Task", "Hypothesis", "Handoff", "Approval")):
         return "coordination"
     if "Entity" in lbl_set:
         return "topology"
@@ -92,9 +100,11 @@ def _determine_memory_type(labels: List[str]) -> str:
 
 
 @app.get("/admin/graph/{tenant_id}")
-def get_graph_snapshot(tenant_id: str) -> Dict[str, Any]:
+def get_graph_snapshot(tenant_id: str, as_of: Optional[int] = Query(None)) -> Dict[str, Any]:
     """
     Returns graph nodes and edges categorized by memory type for visualization.
+    If as_of epoch ms is provided, filters facts to those valid at that time,
+    and filters events, tasks, and handoffs created at or before as_of.
     """
     try:
         graph_name = get_tenant_graph_name(tenant_id)
@@ -107,12 +117,52 @@ def get_graph_snapshot(tenant_id: str) -> Dict[str, Any]:
 
     nodes = []
     id_map = {}
+    valid_internal_ids = set()
+
     if res_nodes and res_nodes.result_set:
         for row in res_nodes.result_set:
             internal_id, labels, props = row
             labels_list = list(labels) if labels else ["Node"]
             mem_type = _determine_memory_type(labels_list)
             
+            # Apply as_of filtering if specified
+            if as_of is not None:
+                # Fact filtering: valid_from <= as_of and (valid_to is null or valid_to > as_of)
+                if "Fact" in labels_list:
+                    vf = props.get("valid_from")
+                    vt = props.get("valid_to")
+                    if vf is not None and vf > as_of:
+                        continue
+                    if vt is not None and vt <= as_of:
+                        continue
+                # Event filtering: ts <= as_of
+                elif "Event" in labels_list:
+                    ts = props.get("ts")
+                    if ts is not None and ts > as_of:
+                        continue
+                # Task filtering: created_at <= as_of
+                elif "Task" in labels_list:
+                    created_at = props.get("created_at")
+                    if created_at is not None and created_at > as_of:
+                        continue
+                # Handoff filtering: created_at <= as_of
+                elif "Handoff" in labels_list:
+                    created_at = props.get("created_at")
+                    if created_at is not None and created_at > as_of:
+                        continue
+                # Session filtering: started_at <= as_of
+                elif "Session" in labels_list:
+                    started_at = props.get("started_at")
+                    if started_at is not None and started_at > as_of:
+                        continue
+                # Incident filtering: created_at <= as_of
+                elif "Incident" in labels_list:
+                    created_at = props.get("created_at")
+                    if created_at is not None and created_at > as_of:
+                        continue
+
+            valid_internal_ids.add(internal_id)
+
             # Choose display label
             name = (
                 props.get("name")
@@ -124,6 +174,11 @@ def get_graph_snapshot(tenant_id: str) -> Dict[str, Any]:
             node_id = str(props.get("id") or internal_id)
             id_map[internal_id] = node_id
 
+            # Determine if fact is currently superseded in this snapshot
+            is_superseded = False
+            if "Fact" in labels_list and props.get("valid_to") is not None:
+                is_superseded = True
+
             nodes.append({
                 "id": node_id,
                 "internal_id": internal_id,
@@ -131,7 +186,8 @@ def get_graph_snapshot(tenant_id: str) -> Dict[str, Any]:
                 "type": labels_list[0],
                 "labels": labels_list,
                 "memory_type": mem_type,
-                "properties": props
+                "properties": props,
+                "is_superseded": is_superseded
             })
 
     # Fetch edges
@@ -142,6 +198,10 @@ def get_graph_snapshot(tenant_id: str) -> Dict[str, Any]:
     if res_edges and res_edges.result_set:
         for row in res_edges.result_set:
             src_internal, tgt_internal, rel_type, rel_props = row
+            # Only include edge if both endpoints are in the filtered node set
+            if as_of is not None:
+                if src_internal not in valid_internal_ids or tgt_internal not in valid_internal_ids:
+                    continue
             src_id = id_map.get(src_internal, str(src_internal))
             tgt_id = id_map.get(tgt_internal, str(tgt_internal))
             edges.append({
@@ -161,6 +221,152 @@ def get_graph_snapshot(tenant_id: str) -> Dict[str, Any]:
             "total_edges": len(edges)
         }
     }
+
+
+@app.get("/admin/timeline/{tenant_id}")
+def get_timeline(tenant_id: str, authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Returns min/max timestamps and key change markers for a tenant's timeline.
+    Protected by admin token check.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    try:
+        graph_name = get_tenant_graph_name(tenant_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    from server.app.queries.timeline import get_timeline_markers
+    res = get_timeline_markers(graph_name)
+    return {
+        "tenant_id": tenant_id,
+        "graph_name": graph_name,
+        **res
+    }
+
+
+@app.get("/admin/explain/{tenant_id}/{node_id}")
+def explain_node(tenant_id: str, node_id: str, authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Returns the provenance chain and deterministic 'because' explanation for node_id.
+    Validates admin token and strictly enforces tenant boundary.
+    Returns 404 NOT_FOUND if node does not exist or belongs to another tenant.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    try:
+        graph_name = get_tenant_graph_name(tenant_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    from server.app.queries.insight import get_explain_provenance
+    res = get_explain_provenance(graph_name, node_id)
+    if not res:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": f"Node {node_id} not found in tenant {tenant_id}"})
+
+    return {
+        "ok": True,
+        "tenant_id": tenant_id,
+        **res
+    }
+
+
+class ApprovalDecisionRequest(BaseModel):
+    decision: str
+    reason: str
+
+
+@app.get("/admin/approvals")
+def get_approvals(tenant: str = Query(...), status: Optional[str] = Query(None), authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Get approvals for a tenant, optionally filtered by status.
+    Protected by admin token check.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    try:
+        graph_name = get_tenant_graph_name(tenant)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    from server.app.queries import approval as appr_queries
+    approvals = appr_queries.list_approvals(graph_name, status=status)
+    return {
+        "ok": True,
+        "tenant": tenant,
+        "approvals": approvals
+    }
+
+
+@app.post("/admin/approvals/{approval_id}/decide")
+def decide_approval_endpoint(
+    approval_id: str,
+    req: ApprovalDecisionRequest,
+    tenant: str = Query(...),
+    authorization: Optional[str] = Header(None)
+) -> Dict[str, Any]:
+    """
+    Record an admin human decision ('approved' or 'rejected') on a pending Approval gate.
+    Protected by admin token check. The admin identity is recorded, never an agent key.
+    Broadcasts SSE approval_decided event.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    try:
+        graph_name = get_tenant_graph_name(tenant)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    from server.app.queries import approval as appr_queries
+    try:
+        res = appr_queries.decide_approval(
+            graph_name=graph_name,
+            approval_id=approval_id,
+            decision=req.decision,
+            reason=req.reason,
+            decided_by="admin"
+        )
+        if not res.get("ok"):
+            raise HTTPException(status_code=400, detail={"code": "CONFLICT", "message": res.get("error")})
+
+        broadcast_event("approval_decided", {
+            "tenant": tenant,
+            "approval_id": approval_id,
+            "status": req.decision,
+            "reason": req.reason,
+            "decided_by": "admin"
+        })
+
+        return res
+    except LookupError as le:
+        raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": str(le)})
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(ve)})
+
+
+@app.get("/admin/compare/latest")
+def get_latest_comparison(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Returns the latest Relay vs. Baseline Flat Memory comparison benchmark results.
+    Protected by admin token check.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    from scripts.compare_baseline import RESULTS_FILE, run_comparison
+    if RESULTS_FILE.exists():
+        try:
+            with open(RESULTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+
+    # If no results cached, run comparison live
+    return run_comparison()
 
 
 @app.get("/admin/stream")
@@ -230,6 +436,106 @@ async def trigger_load_test(agents: int = Query(20), tasks: int = Query(10)):
     passed = await loop.run_in_executor(None, run_load_test, agents, tasks)
     broadcast_event("load_test_finished", {"passed": passed, "agents": agents, "tasks": tasks})
     return {"ok": passed, "agents": agents, "tasks": tasks}
+
+
+class KillAgentRequest(BaseModel):
+    tenant: str
+    agent_role: str
+
+
+class ReclaimTaskRequest(BaseModel):
+    tenant: str
+    agent_role: str
+    task_id: str
+
+
+@app.post("/admin/chaos/kill-agent")
+async def kill_agent(req: KillAgentRequest, authorization: Optional[str] = Header(None)):
+    """
+    Simulate agent failure mid-task (Chaos Button).
+    Stops running loops for that agent without releasing claims so the lease must expire naturally.
+    Returns which task(s) the agent held and broadcasts SSE events.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    try:
+        graph_name = get_tenant_graph_name(req.tenant)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    agent_id = f"agent_{req.agent_role}" if not req.agent_role.startswith("agent_") else req.agent_role
+    held_tasks = get_agent_tasks(graph_name, agent_id)
+
+    broadcast_event("agent_killed", {
+        "tenant": req.tenant,
+        "agent_id": agent_id,
+        "agent_role": req.agent_role,
+        "held_tasks": held_tasks
+    })
+
+    return {
+        "ok": True,
+        "killed_agent": agent_id,
+        "agent_role": req.agent_role,
+        "tenant": req.tenant,
+        "held_tasks": held_tasks
+    }
+
+
+@app.post("/admin/chaos/reclaim-task")
+async def reclaim_task(req: ReclaimTaskRequest, authorization: Optional[str] = Header(None)):
+    """
+    Allows a surviving or restarted agent to pick up a reopened task,
+    log a recovery event in graph memory, and broadcast task_reclaimed.
+    """
+    if not verify_admin_token(authorization):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Invalid admin token"})
+
+    try:
+        graph_name = get_tenant_graph_name(req.tenant)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    agent_id = f"agent_{req.agent_role}" if not req.agent_role.startswith("agent_") else req.agent_role
+
+    claim_res = claim_task(graph_name, req.task_id, agent_id)
+    if not claim_res.get("ok"):
+        return {"ok": False, "error": claim_res.get("error")}
+
+    # Log recovery event to agent's episodic session
+    ctx = AuthContext(
+        tenant_id=req.tenant,
+        agent_id=agent_id,
+        role=req.agent_role,
+        graph_name=graph_name,
+        key_hash=f"hash_{agent_id}"
+    )
+    try:
+        log_event_handler(
+            ctx,
+            event_type="action",
+            summary=f"Surviving agent {agent_id} recovered and reclaimed task {req.task_id} after lease expiration.",
+            entities=[req.task_id]
+        )
+    except Exception as ex:
+        log.warning("Could not log recovery event: %s", ex)
+
+    broadcast_event("task_reclaimed", {
+        "tenant": req.tenant,
+        "task_id": req.task_id,
+        "claimed_by": agent_id,
+        "version": claim_res.get("version"),
+        "lease_expires_at": claim_res.get("lease_expires_at")
+    })
+
+    return {
+        "ok": True,
+        "task_id": req.task_id,
+        "claimed_by": agent_id,
+        "version": claim_res.get("version")
+    }
+
 
 
 # Mount dashboard static directory

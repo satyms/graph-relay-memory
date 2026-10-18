@@ -7,260 +7,461 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: #111827;
-      --card-border: #1f2937;
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
-      --accent: #6366f1;
-      --episodic: #3b82f6;
-      --semantic: #a855f7;
-      --procedural: #10b981;
-      --coordination: #f59e0b;
-      --topology: #06b6d4;
+      --bg: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f8fafc;
+      --bg-surface-subtle: #f1f5f9;
+      --border: #e2e8f0;
+      --border-focus: #cbd5e1;
+      --border-accent: #0284c7;
+      
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+
+      /* Memory Layer Signal System */
+      --topology: #0284c7;
+      --coordination: #d97706;
+      --procedural: #059669;
+      --semantic: #7c3aed;
+      --episodic: #2563eb;
+      --danger: #e11d48;
+      --warning: #b45309;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", monospace;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: var(--font-sans);
       background: var(--bg);
       color: var(--text);
       display: flex;
       flex-direction: column;
       height: 100vh;
       overflow: hidden;
+      font-size: 13px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* Header */
+    /* Top Command Bar */
     header {
-      background: rgba(17, 24, 39, 0.9);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--card-border);
-      padding: 12px 24px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 20;
+      height: 52px;
     }
+
     .brand {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .logo {
-      width: 32px;
-      height: 32px;
-      background: linear-gradient(135deg, var(--accent), var(--topology));
-      border-radius: 8px;
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      color: white;
+      color: var(--topology);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
-    .title-group h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
-    .title-group span { font-size: 0.75rem; color: var(--text-muted); }
+
+    .brand-mark svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .title-group h1 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #0f172a;
+    }
+
+    .title-group .tagline {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
 
     .controls {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
-    select, button {
-      background: var(--card-bg);
+
+    select {
+      background: #ffffff;
       color: var(--text);
-      border: 1px solid var(--card-border);
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-size: 0.82rem;
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.78rem;
+      font-family: var(--font-sans);
       cursor: pointer;
-      transition: all 0.15s ease;
+      outline: none;
+      transition: border-color 0.15s ease;
     }
-    select:hover, button:hover { border-color: var(--accent); }
-    button.primary {
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      border-color: #4f46e5;
-      font-weight: 600;
-      color: white;
+
+    select:focus, select:hover {
+      border-color: var(--border-focus);
     }
-    button.primary:hover { opacity: 0.9; }
-    .status-badge {
-      display: flex;
+
+    button {
+      background: #ffffff;
+      color: var(--text);
+      border: 1px solid #cbd5e1;
+      padding: 5px 12px;
+      border-radius: 5px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 0.75rem;
-      color: var(--procedural);
-      padding: 4px 10px;
-      background: rgba(16, 185, 129, 0.1);
-      border-radius: 20px;
-      border: 1px solid rgba(16, 185, 129, 0.2);
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
+
+    button:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    button.primary {
+      background: #0284c7;
+      border-color: #0369a1;
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(2, 132, 199, 0.2);
+    }
+
+    button.primary:hover {
+      background: #0369a1;
+      border-color: #0284c7;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--procedural);
+      padding: 3px 9px;
+      background: rgba(5, 150, 105, 0.08);
+      border-radius: 9999px;
+      border: 1px solid rgba(5, 150, 105, 0.2);
+      font-family: var(--font-mono);
+    }
+
     .status-dot {
-      width: 7px;
-      height: 7px;
+      width: 6px;
+      height: 6px;
       background: var(--procedural);
       border-radius: 50%;
-      animation: pulse 2s infinite;
+      animation: pulse 2s infinite ease-in-out;
     }
+
     @keyframes pulse {
       0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.35; transform: scale(0.85); }
       100% { opacity: 1; transform: scale(1); }
     }
 
-    /* Main Layout */
+    /* Workspace */
     .workspace {
       display: grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: 1fr 430px;
       flex: 1;
-      height: calc(100vh - 61px);
+      height: calc(100vh - 52px);
       overflow: hidden;
     }
 
     /* Graph Canvas */
     .graph-pane {
       position: relative;
-      background: radial-gradient(circle at 50% 50%, #111827 0%, #090d16 100%);
+      background: radial-gradient(circle at 50% 50%, #ffffff 0%, #f1f5f9 100%);
       overflow: hidden;
     }
+
     #graph-svg {
       width: 100%;
       height: 100%;
     }
+
+    /* Scrubber Floating Bar */
+    #timetravel-bar {
+      position: absolute;
+      top: 14px;
+      left: 20px;
+      right: 20px;
+      max-width: 760px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 9px 14px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      z-index: 15;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .scrubber-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .scrubber-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--topology);
+    }
+
+    .scrubber-time {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: #e2e8f0;
+      outline: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--topology);
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(2, 132, 199, 0.4);
+      border: 2px solid #ffffff;
+    }
+
+    /* Legend */
     .legend {
       position: absolute;
-      bottom: 16px;
-      left: 16px;
-      background: rgba(17, 24, 39, 0.85);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 10px 14px;
+      bottom: 14px;
+      left: 14px;
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
       display: flex;
-      gap: 14px;
-      font-size: 0.75rem;
+      gap: 12px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
       backdrop-filter: blur(8px);
       z-index: 10;
     }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
-    .legend-color { width: 10px; height: 10px; border-radius: 50%; }
 
-    /* Sidebar */
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-color { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Sidebar Inspector */
     .sidebar {
-      background: var(--card-bg);
-      border-left: 1px solid var(--card-border);
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       overflow-y: auto;
     }
+
     .tabs {
       display: flex;
-      border-bottom: 1px solid var(--card-border);
-      background: rgba(9, 13, 22, 0.5);
+      border-bottom: 1px solid var(--border);
+      background: #f8fafc;
+      overflow-x: auto;
     }
+
     .tab {
       flex: 1;
       text-align: center;
-      padding: 10px 0;
-      font-size: 0.8rem;
+      padding: 10px 6px;
+      font-size: 0.74rem;
       font-weight: 500;
       color: var(--text-muted);
       cursor: pointer;
       border-bottom: 2px solid transparent;
-      transition: all 0.15s;
+      white-space: nowrap;
+      transition: all 0.15s ease;
     }
+
+    .tab:hover {
+      color: var(--text);
+    }
+
     .tab.active {
       color: var(--text);
-      border-bottom-color: var(--accent);
-      background: rgba(99, 102, 241, 0.05);
+      border-bottom-color: var(--topology);
+      background: #ffffff;
+      font-weight: 600;
     }
+
     .tab-content {
-      padding: 16px;
+      padding: 14px;
       display: none;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
+
     .tab-content.active { display: flex; }
 
-    /* Cards */
+    /* Surface Cards & Modules */
     .card {
-      background: rgba(17, 24, 39, 0.6);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
       padding: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
+
     .card-title {
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      color: #1e293b;
+      margin-bottom: 6px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
     }
+
     .feed-item {
-      padding: 10px;
-      border-radius: 6px;
-      background: rgba(31, 41, 55, 0.4);
-      border-left: 3px solid var(--accent);
-      margin-bottom: 8px;
-      font-size: 0.8rem;
+      padding: 9px 10px;
+      border-radius: 5px;
+      background: #f8fafc;
+      border: 1px solid #f1f5f9;
+      border-left: 3px solid var(--border-accent);
+      margin-bottom: 6px;
+      font-size: 0.77rem;
     }
+
+    .feed-item:last-child {
+      margin-bottom: 0;
+    }
+
     .feed-item .header {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 4px;
+      margin-bottom: 3px;
       font-weight: 600;
-      font-size: 0.78rem;
+      font-size: 0.76rem;
     }
+
     .badge {
+      display: inline-block;
       padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      text-transform: uppercase;
+      border-radius: 3px;
+      font-size: 0.68rem;
+      font-weight: 500;
+      font-family: var(--font-mono);
     }
-    .badge-open { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .badge-done { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .badge-in_progress { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    .badge-open { background: rgba(37, 99, 235, 0.1); color: #1d4ed8; }
+    .badge-done { background: rgba(5, 150, 105, 0.1); color: #047857; }
+    .badge-in_progress { background: rgba(217, 119, 6, 0.1); color: #b45309; }
 
     /* Proof table */
     .proof-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.75rem;
+      font-size: 0.73rem;
     }
+
     .proof-table th, .proof-table td {
-      padding: 6px 8px;
+      padding: 7px 8px;
       text-align: left;
-      border-bottom: 1px solid var(--card-border);
+      border-bottom: 1px solid var(--border);
     }
-    .proof-table th { color: var(--text-muted); font-weight: 600; }
+
+    .proof-table th {
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.7rem;
+    }
+
     .pass-tag {
       color: var(--procedural);
-      font-weight: bold;
+      font-weight: 600;
+      font-family: var(--font-mono);
     }
+
     .metric-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      gap: 8px;
     }
+
     .metric-box {
-      background: rgba(31, 41, 55, 0.3);
-      padding: 10px;
-      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 9px;
+      border-radius: 5px;
       text-align: center;
     }
-    .metric-val { font-size: 1.25rem; font-weight: 700; color: var(--topology); }
-    .metric-lbl { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+
+    .metric-val {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--topology);
+      font-family: var(--font-mono);
+    }
+
+    .metric-lbl {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="brand">
-      <div class="logo">R</div>
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="6" cy="6" r="3"></circle>
+          <circle cx="18" cy="6" r="3"></circle>
+          <circle cx="12" cy="18" r="3"></circle>
+          <path d="M8.5 7.5L15.5 7.5"></path>
+          <path d="M7.5 8.5L10.5 15.5"></path>
+          <path d="M16.5 8.5L13.5 15.5"></path>
+        </svg>
+      </div>
       <div class="title-group">
         <h1>Relay Graph Memory</h1>
-        <span>FalkorDB Multi-Agent Coordination Engine (Track 02)</span>
+        <span class="tagline">FalkorDB Multi-Agent Coordination Engine &bull; Track 02</span>
       </div>
     </div>
 
@@ -269,12 +470,12 @@
         <option value="acme" selected>Tenant: Acme (A)</option>
         <option value="globex">Tenant: Globex (B)</option>
       </select>
-      <button class="primary" onclick="triggerScenario()">▶ Run Incident Scenario</button>
-      <button onclick="triggerLoadTest()">⚡ Run Load Test</button>
-      <button onclick="triggerIsolationTest()">🔒 Run Isolation Test</button>
+      <button class="primary" onclick="triggerScenario()">Run incident scenario</button>
+      <button onclick="triggerLoadTest()">Concurrency test</button>
+      <button onclick="triggerIsolationTest()">Isolation test</button>
       <div class="status-badge">
         <div class="status-dot"></div>
-        <span id="sse-status">Live Memory Stream</span>
+        <span id="sse-status">Live memory stream</span>
       </div>
     </div>
   </header>
@@ -282,6 +483,21 @@
   <div class="workspace">
     <!-- Center Graph Area -->
     <div class="graph-pane">
+      <!-- Time Travel Scrubber Bar -->
+      <div id="timetravel-bar">
+        <div class="scrubber-header">
+          <div class="scrubber-title">
+            <span>Historical time-travel slider</span>
+            <span id="slider-timestamp-label" class="scrubber-time">Viewing live memory</span>
+          </div>
+          <button id="btn-back-live" style="padding: 2px 8px; font-size: 0.7rem; display: none; background: #0369a1; border-color: #0284c7; color: white;" onclick="backToLive()">Back to live stream</button>
+        </div>
+        <div style="position: relative; width: 100%; margin-top: 2px;">
+          <input type="range" id="time-slider" min="0" max="100" value="100" oninput="onSliderMove(this.value)">
+          <div id="timeline-markers-track" style="position: relative; width: 100%; height: 6px; margin-top: 3px;"></div>
+        </div>
+      </div>
+
       <svg id="graph-svg"></svg>
       <div class="legend">
         <div class="legend-item"><div class="legend-color" style="background: var(--topology);"></div> Topology</div>
@@ -292,27 +508,72 @@
       </div>
     </div>
 
-    <!-- Right Sidebar -->
+    <!-- Right Sidebar Inspector -->
     <div class="sidebar">
       <div class="tabs">
         <div class="tab active" onclick="switchTab('feed')">Handoffs & Tasks</div>
+        <div class="tab" onclick="switchTab('approvals')" id="tab-btn-approvals">Approvals <span id="pending-badge" style="display:none; background:#f43f5e; color:white; border-radius:8px; padding:1px 5px; font-size:0.65rem;">0</span></div>
         <div class="tab" onclick="switchTab('lineage')">Fact Lineage</div>
+        <div class="tab" onclick="switchTab('explain')" id="tab-btn-explain">Explain</div>
         <div class="tab" onclick="switchTab('proofs')">Proofs & Metrics</div>
       </div>
 
       <!-- Tab 1: Handoffs and Tasks -->
       <div id="tab-feed" class="tab-content active">
+        <!-- Agent Fleet & Chaos Control -->
+        <div class="card" style="border-left: 3px solid var(--danger);">
+          <div class="card-title" style="color: var(--danger);">Agent fleet & chaos control</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">
+            Simulate an ungraceful agent crash mid-task. The task lease expires naturally, the background reaper unblocks it, and a surviving teammate auto-reclaims it.
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border); padding: 5px 9px; border-radius: 5px; font-size: 0.76rem;">
+              <span>agent_triage</span>
+              <button style="background: #fff1f2; border-color: #fecdd3; color: var(--danger); padding: 2px 7px; font-size: 0.68rem;" onclick="killAgent('triage')">Kill agent</button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border); padding: 5px 9px; border-radius: 5px; font-size: 0.76rem;">
+              <span>agent_investigator</span>
+              <button style="background: #fff1f2; border-color: #fecdd3; color: var(--danger); padding: 2px 7px; font-size: 0.68rem;" onclick="killAgent('investigator')">Kill agent</button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border); padding: 5px 9px; border-radius: 5px; font-size: 0.76rem;">
+              <span>agent_remediator</span>
+              <button style="background: #fff1f2; border-color: #fecdd3; color: var(--danger); padding: 2px 7px; font-size: 0.68rem;" onclick="killAgent('remediator')">Kill agent</button>
+            </div>
+          </div>
+          <div id="chaos-status" style="margin-top: 8px; font-size: 0.72rem; color: var(--warning); font-family: var(--font-mono);"></div>
+        </div>
+
         <div class="card">
-          <div class="card-title">Live Handoff Chain</div>
+          <div class="card-title">Live handoff chain</div>
           <div id="handoff-list">
-            <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 12px;">No active handoffs. Run incident scenario to see agent handoffs stream.</div>
+            <div style="font-size: 0.74rem; color: var(--text-dim); text-align: center; padding: 12px;">No active handoffs. Run the scenario to stream agent handoffs.</div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">Active Task Board & Claims</div>
+          <div class="card-title">Active task board & claims</div>
           <div id="task-list">
-            <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 12px;">No open tasks.</div>
+            <div style="font-size: 0.74rem; color: var(--text-dim); text-align: center; padding: 12px;">No open tasks.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Pending Approvals & Human Gates -->
+      <div id="tab-approvals" class="tab-content">
+        <div class="card" style="border-left: 3px solid var(--coordination);">
+          <div class="card-title" style="color: var(--coordination);">Pending approval requests</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">
+            Remediator agents must submit safety approvals for risky actions (e.g. <code>rollback_deploy</code>, <code>restart_service</code>).
+          </div>
+          <div id="approvals-list">
+            <div style="font-size: 0.74rem; color: var(--text-dim); text-align: center; padding: 14px;">No pending approvals. Full green clearance.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Past approval decisions</div>
+          <div id="decided-approvals-list" style="font-size: 0.74rem; color: var(--text-muted);">
+            No past approval decisions recorded.
           </div>
         </div>
       </div>
@@ -320,27 +581,42 @@
       <!-- Tab 2: Fact Lineage & Time Travel -->
       <div id="tab-lineage" class="tab-content">
         <div class="card">
-          <div class="card-title">Entity Ownership Trap (Supersession)</div>
-          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
-            Demonstrates <code>SUPERSEDES</code> historical lineage. As-of time travel allows querying historical belief at any timestamp.
+          <div class="card-title">Entity ownership (supersession)</div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">
+            Demonstrates <code>SUPERSEDES</code> historical lineage. As-of time-travel queries reconstruct truth at any earlier moment.
           </p>
-          <div id="lineage-container" style="font-size: 0.8rem;">
-            <div style="padding: 8px; border-left: 2px solid var(--semantic); margin-bottom: 8px;">
-              <div style="font-weight: 600; color: #c084fc;">Current Belief: payments-svc.owner</div>
-              <div id="current-owner-val" style="color: var(--text); font-size: 0.95rem; font-weight: bold;">Loading...</div>
+          <div id="lineage-container" style="font-size: 0.78rem;">
+            <div style="padding: 7px 10px; border-left: 2px solid var(--semantic); background: #f5f3ff; border-radius: 4px; margin-bottom: 8px;">
+              <div style="font-weight: 600; color: var(--semantic);">Current belief: payments-svc.owner</div>
+              <div id="current-owner-val" style="color: var(--text); font-size: 0.9rem; font-weight: 700; margin-top: 2px;">Loading...</div>
             </div>
-            <div style="padding: 8px; border-left: 2px solid #6b7280; color: var(--text-muted);">
-              <div style="font-weight: 600;">Historical Belief (as_of earlier):</div>
-              <div id="historical-owner-val" style="font-style: italic;">Team Core (superseded)</div>
+            <div style="padding: 7px 10px; border-left: 2px solid #94a3b8; background: #f1f5f9; border-radius: 4px; color: var(--text-muted);">
+              <div style="font-weight: 600;">Historical belief (earlier time):</div>
+              <div id="historical-owner-val" style="font-style: italic; margin-top: 2px;">Team Core (superseded)</div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">Procedural Learning Lineage</div>
-          <div id="proc-lineage-container" style="font-size: 0.75rem; color: var(--text-muted);">
+          <div class="card-title">Procedural learning lineage</div>
+          <div id="proc-lineage-container" style="font-size: 0.73rem; color: var(--text-muted);">
             <div><b>restart-redis v1</b>: Retired after failure on deploy trap.</div>
             <div style="margin-top: 4px;"><b>restart-redis v2</b>: Forked with precondition: <i>"check for deployment in last 30m"</i>.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Explain Provenance Chain -->
+      <div id="tab-explain" class="tab-content">
+        <div class="card" style="border-left: 3px solid var(--semantic);">
+          <div class="card-title" style="color: var(--semantic);">Provenance explanation</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">
+            Click on any node in the graph or task board to inspect its complete provenance history, author agent, and deterministic data-driven rationale.
+          </div>
+          <div id="explain-details">
+            <div style="font-size: 0.74rem; color: var(--text-dim); text-align: center; padding: 16px;">
+              Click any node in the graph to explain why Relay believes it.
+            </div>
           </div>
         </div>
       </div>
@@ -348,32 +624,32 @@
       <!-- Tab 3: Proofs and Concurrency -->
       <div id="tab-proofs" class="tab-content">
         <div class="card">
-          <div class="card-title">Concurrency & CAS Metrics (CON-1 to CON-6)</div>
+          <div class="card-title">Concurrency & CAS telemetry</div>
           <div class="metric-grid">
             <div class="metric-box">
               <div class="metric-val" id="metric-throughput">1,941</div>
-              <div class="metric-lbl">OPS / SEC</div>
+              <div class="metric-lbl">Operations / sec</div>
             </div>
             <div class="metric-box">
               <div class="metric-val" id="metric-duplicates" style="color: var(--procedural);">0</div>
-              <div class="metric-lbl">DUPLICATE CLAIMS</div>
+              <div class="metric-lbl">Duplicate claims</div>
             </div>
             <div class="metric-box">
               <div class="metric-val" id="metric-p50">5.6 ms</div>
-              <div class="metric-lbl">p50 LATENCY</div>
+              <div class="metric-lbl">p50 latency</div>
             </div>
             <div class="metric-box">
               <div class="metric-val" id="metric-p95">19.0 ms</div>
-              <div class="metric-lbl">p95 LATENCY</div>
+              <div class="metric-lbl">p95 latency</div>
             </div>
           </div>
         </div>
 
         <div class="card">
-          <div class="card-title">Tenant Isolation Verification (ISO-1 to ISO-7)</div>
+          <div class="card-title">Tenant isolation verification</div>
           <table class="proof-table">
             <thead>
-              <tr><th>PROOF</th><th>STATUS</th></tr>
+              <tr><th>Proof</th><th>Status</th></tr>
             </thead>
             <tbody id="isolation-tbody">
               <tr><td>ISO-1: Cross-tenant fact query</td><td class="pass-tag">PASS (0 facts)</td></tr>
@@ -385,8 +661,44 @@
               <tr><td>ISO-7: Shared catalog immutability</td><td class="pass-tag">PASS (Read-only)</td></tr>
             </tbody>
           </table>
-          <div style="margin-top: 8px; font-size: 0.72rem; color: var(--procedural); font-weight: bold; text-align: right;">
+          <div style="margin-top: 8px; font-size: 0.72rem; color: var(--procedural); font-weight: 600; text-align: right; font-family: var(--font-mono);">
             0 cross-tenant reads succeeded
+          </div>
+        </div>
+
+        <!-- Feature 4: Relay vs Flat Memory Baseline -->
+        <div class="card" style="border-left: 3px solid var(--topology);">
+          <div class="card-title" style="color: var(--topology);">
+            <span>Relay vs flat memory baseline</span>
+            <button style="padding: 2px 7px; font-size: 0.68rem;" onclick="loadComparisonBenchmark()">Refresh</button>
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 8px;">
+            Benchmarked against a standard flat store with substring search (<code>agents/baseline_memory.py</code>).
+          </div>
+          <table class="proof-table" style="font-size: 0.72rem;">
+            <thead>
+              <tr><th>Check</th><th>Relay memory</th><th>Flat baseline</th></tr>
+            </thead>
+            <tbody id="baseline-cmp-tbody">
+              <tr>
+                <td><b>1. Concurrency race</b><br><span style="color:var(--text-muted);">20 workers / 10 tasks</span></td>
+                <td style="color: var(--procedural); font-weight:600;">0 duplicates</td>
+                <td style="color: var(--danger); font-weight:600;">153 duplicates</td>
+              </tr>
+              <tr>
+                <td><b>2. As-of correction</b><br><span style="color:var(--text-muted);">Earlier vs current belief</span></td>
+                <td style="color: var(--procedural); font-weight:600;">Core ➔ Billing (True)</td>
+                <td style="color: var(--danger); font-weight:600;">Billing ➔ Billing (Overwritten)</td>
+              </tr>
+              <tr>
+                <td><b>3. Isolation boundary</b><br><span style="color:var(--text-muted);">Cross-tenant leak test</span></td>
+                <td style="color: var(--procedural); font-weight:600;">0 leaks (Isolated)</td>
+                <td style="color: var(--danger); font-weight:600;">1 keys leaked</td>
+              </tr>
+            </tbody>
+          </table>
+          <div id="baseline-cmp-verdict" style="margin-top: 8px; font-size: 0.71rem; color: var(--text-muted); background: var(--bg-surface-elevated); border: 1px solid var(--border); padding: 7px; border-radius: 4px;">
+            <b>Verdict:</b> Relay's atomic graph CAS prevents race conditions, preserves historical ground truth via <code>SUPERSEDES</code>, and enforces strict FalkorDB graph-per-tenant boundaries.
           </div>
         </div>
       </div>
@@ -408,12 +720,12 @@
     const height = window.innerHeight - 61;
 
     const colorMap = {
-      topology: '#06b6d4',
-      coordination: '#f59e0b',
-      procedural: '#10b981',
-      semantic: '#a855f7',
-      episodic: '#3b82f6',
-      other: '#9ca3af'
+      topology: '#0284c7',
+      coordination: '#d97706',
+      procedural: '#059669',
+      semantic: '#7c3aed',
+      episodic: '#2563eb',
+      other: '#64748b'
     };
 
     function initGraph() {
@@ -431,16 +743,98 @@
         .attr("markerHeight", 6)
         .attr("orient", "auto")
         .append("path")
-        .attr("fill", "#4b5563")
+        .attr("fill", "#94a3b8")
         .attr("d", "M0,-5L10,0L0,5");
 
       g = svg.append("g");
       svg.call(d3.zoom().scaleExtent([0.1, 4]).on("zoom", (e) => g.attr("transform", e.transform)));
 
       loadGraph();
+      loadTimeline();
+    }
+
+    let isLiveMode = true;
+    let timelineData = null;
+
+    async function loadTimeline() {
+      const tenant = document.getElementById("tenant-select").value;
+      try {
+        const res = await fetch(`/admin/timeline/${tenant}`, {
+          headers: { "Authorization": "Bearer relay-admin-secret-dev-token" }
+        });
+        if (res.ok) {
+          timelineData = await res.json();
+          renderTimelineMarkers(timelineData);
+        }
+      } catch (err) {
+        console.error("Timeline error:", err);
+      }
+    }
+
+    function renderTimelineMarkers(data) {
+      const track = document.getElementById("timeline-markers-track");
+      if (!track || !data.markers || data.markers.length === 0) return;
+      const min = data.min_ts;
+      const max = data.max_ts;
+      const span = max - min || 1;
+
+      track.innerHTML = data.markers.map(m => {
+        const pct = Math.max(0, Math.min(100, ((m.ts - min) / span) * 100));
+        let color = '#a855f7';
+        if (m.type === 'procedure_fork') color = '#10b981';
+        if (m.type === 'claim' || m.type === 'task_created') color = '#f59e0b';
+        if (m.type === 'handoff') color = '#3b82f6';
+        return `<div title="${m.label} (${new Date(m.ts).toLocaleTimeString()})" style="position: absolute; left: ${pct}%; top: 0; width: 6px; height: 6px; border-radius: 50%; background: ${color}; transform: translateX(-50%); cursor: pointer;" onclick="jumpToTimestamp(${m.ts})"></div>`;
+      }).join("");
+    }
+
+    async function onSliderMove(val) {
+      if (!timelineData) return;
+      isLiveMode = false;
+      document.getElementById("btn-back-live").style.display = "inline-block";
+      document.getElementById("time-slider").disabled = false;
+
+      const min = timelineData.min_ts;
+      const max = timelineData.max_ts;
+      const targetTs = Math.round(min + ((max - min) * (val / 100)));
+      const dt = new Date(targetTs).toLocaleTimeString();
+      document.getElementById("slider-timestamp-label").innerText = `as_of ${dt} (${targetTs})`;
+
+      loadGraphAsOf(targetTs);
+    }
+
+    function jumpToTimestamp(ts) {
+      if (!timelineData) return;
+      const min = timelineData.min_ts;
+      const max = timelineData.max_ts;
+      const pct = Math.round(((ts - min) / (max - min || 1)) * 100);
+      document.getElementById("time-slider").value = pct;
+      onSliderMove(pct);
+    }
+
+    async function loadGraphAsOf(asOfTs) {
+      const tenant = document.getElementById("tenant-select").value;
+      try {
+        const res = await fetch(`/admin/graph/${tenant}?as_of=${asOfTs}`);
+        const data = await res.json();
+        updateGraph(data.nodes, data.edges);
+        updateSidebar(data);
+      } catch (err) {
+        console.error("Failed to load historical snapshot:", err);
+      }
+    }
+
+    function backToLive() {
+      isLiveMode = true;
+      document.getElementById("btn-back-live").style.display = "none";
+      document.getElementById("slider-timestamp-label").innerText = "Viewing LIVE memory";
+      document.getElementById("time-slider").value = 100;
+      loadGraph();
+      loadTimeline();
     }
 
     async function loadGraph() {
+      if (!isLiveMode) return;
       const tenant = document.getElementById("tenant-select").value;
       try {
         const res = await fetch(`/admin/graph/${tenant}`);
@@ -462,8 +856,8 @@
         .force("collision", d3.forceCollide().radius(26));
 
       link = g.append("g")
-        .attr("stroke", "#374151")
-        .attr("stroke-opacity", 0.6)
+        .attr("stroke", "#cbd5e1")
+        .attr("stroke-opacity", 0.8)
         .selectAll("line")
         .data(edges)
         .join("line")
@@ -474,6 +868,8 @@
         .selectAll("g")
         .data(nodes)
         .join("g")
+        .style("cursor", "pointer")
+        .on("click", (event, d) => explainNode(d.id))
         .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
@@ -481,20 +877,23 @@
 
       node.append("circle")
         .attr("r", d => d.type === "Entity" ? 14 : 10)
-        .attr("fill", d => colorMap[d.memory_type] || '#9ca3af')
-        .attr("stroke", "#111827")
-        .attr("stroke-width", 2);
+        .attr("fill", d => colorMap[d.memory_type] || '#64748b')
+        .attr("stroke", d => d.is_superseded ? "#cbd5e1" : "#ffffff")
+        .attr("stroke-width", 2)
+        .attr("opacity", d => d.is_superseded ? 0.35 : 1.0);
 
       node.append("text")
-        .text(d => d.label)
+        .text(d => d.is_superseded ? `${d.label} (superseded)` : d.label)
         .attr("x", 12)
         .attr("y", 4)
-        .attr("fill", "#e5e7eb")
+        .attr("fill", d => d.is_superseded ? "#94a3b8" : "#0f172a")
         .attr("font-size", "10px")
-        .attr("font-weight", "500")
+        .attr("font-weight", "600")
+        .attr("font-style", d => d.is_superseded ? "italic" : "normal")
         .attr("paint-order", "stroke")
-        .attr("stroke", "#111827")
-        .attr("stroke-width", 3);
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 3)
+        .attr("opacity", d => d.is_superseded ? 0.45 : 1.0);
 
       simulation.on("tick", () => {
         link
@@ -523,6 +922,82 @@
       event.subject.fy = null;
     }
 
+    // Feature 3: Click-to-Explain
+    async function explainNode(nodeId) {
+      const tenant = document.getElementById("tenant-select").value;
+      const explainEl = document.getElementById("explain-details");
+      explainEl.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-muted); padding: 12px;">Loading explanation for ${nodeId}...</div>`;
+
+      // Switch to explain tab automatically
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-btn-explain').classList.add('active');
+      document.getElementById('tab-explain').classList.add('active');
+
+      try {
+        const res = await fetch(`/admin/explain/${tenant}/${nodeId}`, {
+          headers: { "Authorization": "Bearer relay-admin-secret-dev-token" }
+        });
+        if (!res.ok) {
+          explainEl.innerHTML = `<div style="font-size: 0.75rem; color: var(--danger); padding: 12px;">Node ${nodeId} not found or no provenance recorded.</div>`;
+          return;
+        }
+        const data = await res.json();
+        renderExplanation(data);
+        highlightExplanationGraph(data);
+      } catch (err) {
+        explainEl.innerHTML = `<div style="font-size: 0.75rem; color: var(--danger); padding: 12px;">Error explaining node: ${err}</div>`;
+      }
+    }
+
+    function renderExplanation(data) {
+      const explainEl = document.getElementById("explain-details");
+      const dt = data.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A';
+      explainEl.innerHTML = `
+        <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+          <div style="font-size: 0.78rem; font-weight: 600; color: var(--text);">
+            Target: <code style="color: var(--semantic); font-family: var(--font-mono);">${data.node_id}</code> (${data.labels.join(', ')})
+          </div>
+          <div style="font-size: 0.71rem; color: var(--text-muted); margin-top: 3px;">
+            Author / Owner: <b>${data.author}</b> &bull; Timestamp: <span style="font-family: var(--font-mono);">${dt}</span>
+          </div>
+        </div>
+
+        <div style="background: #f0f9ff; border-left: 3px solid var(--border-accent); padding: 10px 12px; border-radius: 4px; margin-bottom: 12px;">
+          <div style="font-size: 0.73rem; font-weight: 600; color: var(--border-accent); margin-bottom: 4px;">Deterministic rationale</div>
+          <div style="font-size: 0.8rem; color: var(--text); line-height: 1.45;">${data.because}</div>
+        </div>
+
+        <div style="font-size: 0.73rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">Provenance & evidence chain</div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          ${data.nodes.map(n => `
+            <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border); border-radius: 5px; padding: 7px 10px; font-size: 0.74rem; cursor: pointer;" onclick="explainNode('${n.id}')">
+              <div style="display: flex; justify-content: space-between; font-weight: 600;">
+                <span style="color: ${colorMap[n.labels[0].toLowerCase()] || '#64748b'}; font-family: var(--font-mono);">${n.labels[0]}: ${n.id}</span>
+                <span style="color: var(--text-dim); font-size: 0.68rem;">Inspect &rarr;</span>
+              </div>
+              <div style="color: var(--text-muted); margin-top: 3px; font-size: 0.71rem;">
+                ${n.properties.summary || n.properties.statement || (n.properties.predicate ? `${n.properties.predicate} = ${n.properties.value}` : n.properties.title || '')}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function highlightExplanationGraph(data) {
+      if (!node || !link) return;
+      const highlightIds = new Set(data.nodes.map(n => n.id));
+      node.selectAll("circle")
+        .attr("stroke", d => highlightIds.has(d.id) ? "#d97706" : (d.is_superseded ? "#cbd5e1" : "#ffffff"))
+        .attr("stroke-width", d => highlightIds.has(d.id) ? 3.5 : 2);
+
+      link
+        .attr("stroke", d => (highlightIds.has(d.source.id) && highlightIds.has(d.target.id)) ? "#d97706" : "#cbd5e1")
+        .attr("stroke-width", d => (highlightIds.has(d.source.id) && highlightIds.has(d.target.id)) ? 2.5 : 1.5)
+        .attr("stroke-opacity", d => (highlightIds.has(d.source.id) && highlightIds.has(d.target.id)) ? 1.0 : 0.4);
+    }
+
     function updateSidebar(data) {
       // Find handoffs
       const handoffs = data.nodes.filter(n => n.labels.includes("Handoff"));
@@ -531,10 +1006,10 @@
         hList.innerHTML = handoffs.map(h => `
           <div class="feed-item" style="border-left-color: var(--coordination);">
             <div class="header">
-              <span>${h.properties.from_agent || 'agent'} ➔ ${h.properties.to_agent || 'agent'}</span>
+              <span>${h.properties.from_agent || 'agent'} &rarr; ${h.properties.to_agent || 'agent'}</span>
               <span class="badge badge-${h.properties.status}">${h.properties.status}</span>
             </div>
-            <div style="color: var(--text-muted); font-size: 0.72rem;">${h.properties.context_summary || ''}</div>
+            <div style="color: var(--text-muted); font-size: 0.71rem;">${h.properties.context_summary || ''}</div>
           </div>
         `).join("");
       }
@@ -543,17 +1018,26 @@
       const tasks = data.nodes.filter(n => n.labels.includes("Task"));
       const tList = document.getElementById("task-list");
       if (tasks.length > 0) {
-        tList.innerHTML = tasks.map(t => `
-          <div class="feed-item" style="border-left-color: var(--coordination);">
+        const now = Date.now();
+        tList.innerHTML = tasks.map(t => {
+          let leaseCountdown = '';
+          const expires = t.properties.lease_expires_at;
+          if (t.properties.status === 'in_progress' && expires) {
+            const diffSec = Math.max(0, Math.round((expires - now) / 1000));
+            leaseCountdown = `<span style="color: var(--warning); margin-left: 6px; font-family: var(--font-mono);">⏱ ${diffSec}s lease</span>`;
+          }
+          return `
+          <div class="feed-item" id="task-card-${t.id}" style="border-left-color: ${t.properties.status === 'in_progress' ? 'var(--coordination)' : (t.properties.status === 'open' ? 'var(--episodic)' : 'var(--procedural)')};">
             <div class="header">
-              <span>${t.label}</span>
+              <span>${t.label} <span style="font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted);">(v${t.properties.version || 1})</span></span>
               <span class="badge badge-${t.properties.status}">${t.properties.status}</span>
             </div>
-            <div style="color: var(--text-muted); font-size: 0.72rem;">
-              Owner: <b>${t.properties.claimed_by || 'Unclaimed'}</b> | Priority: ${t.properties.priority || 5}
+            <div style="color: var(--text-muted); font-size: 0.71rem;">
+              Owner: <b>${t.properties.claimed_by || 'Unclaimed'}</b> &bull; Priority: ${t.properties.priority || 5} ${leaseCountdown}
             </div>
           </div>
-        `).join("");
+        `;
+        }).join("");
       }
 
       // Find payments-svc owner fact
@@ -561,6 +1045,183 @@
       if (ownerFacts.length > 0) {
         const activeFact = ownerFacts.find(f => !f.properties.valid_to) || ownerFacts[0];
         document.getElementById("current-owner-val").innerText = activeFact.properties.value || 'Team Billing';
+      }
+
+      loadApprovals();
+    }
+
+    // Feature 5: Approvals Management
+    async function loadApprovals() {
+      const tenant = document.getElementById("tenant-select").value;
+      try {
+        const res = await fetch(`/admin/approvals?tenant=${tenant}`, {
+          headers: { "Authorization": "Bearer relay-admin-secret-dev-token" }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const approvals = data.approvals || [];
+        const pending = approvals.filter(a => a.status === 'pending');
+        const decided = approvals.filter(a => a.status !== 'pending');
+
+        const badge = document.getElementById("pending-badge");
+        if (pending.length > 0) {
+          badge.style.display = "inline-block";
+          badge.innerText = pending.length;
+        } else {
+          badge.style.display = "none";
+        }
+
+        const pendingList = document.getElementById("approvals-list");
+        if (pending.length === 0) {
+          pendingList.innerHTML = `<div style="font-size: 0.74rem; color: var(--text-dim); text-align: center; padding: 12px;">No pending approvals. Full green clearance.</div>`;
+        } else {
+          pendingList.innerHTML = pending.map(a => `
+            <div class="feed-item" style="border-left-color: var(--warning); margin-bottom: 8px;">
+              <div class="header">
+                <span>Action: <b style="color: var(--warning); font-family: var(--font-mono);">${a.action}</b></span>
+                <span class="badge" style="background: #fef3c7; color: #b45309;">Pending</span>
+              </div>
+              <div style="font-size: 0.71rem; color: var(--text-muted); margin: 4px 0;">
+                Target: <code>${a.target}</code> &bull; Requested by: <b>${a.requested_by}</b>
+              </div>
+              <div style="font-size: 0.73rem; color: var(--text); font-style: italic; margin-bottom: 8px;">
+                &ldquo;${a.justification || 'No justification provided'}&rdquo;
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button style="background: #ecfdf5; border-color: #a7f3d0; color: #047857; padding: 3px 9px; font-size: 0.71rem;" onclick="decideApproval('${a.approval_id}', 'approved')">Authorize</button>
+                <button style="background: #fff1f2; border-color: #fecdd3; color: #be123c; padding: 3px 9px; font-size: 0.71rem;" onclick="decideApproval('${a.approval_id}', 'rejected')">Deny</button>
+              </div>
+            </div>
+          `).join("");
+        }
+
+        const decidedList = document.getElementById("decided-approvals-list");
+        if (decided.length === 0) {
+          decidedList.innerHTML = `No past approval decisions recorded.`;
+        } else {
+          decidedList.innerHTML = decided.map(a => `
+            <div style="padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.72rem;">
+              <div style="display: flex; justify-content: space-between;">
+                <b style="font-family: var(--font-mono);">${a.action}</b>
+                <span class="badge badge-${a.status === 'approved' ? 'done' : 'open'}" style="${a.status === 'rejected' ? 'background: #fff1f2; color:#be123c;' : ''}">${a.status}</span>
+              </div>
+              <div style="color: var(--text-muted); font-size: 0.68rem; margin-top: 2px;">
+                ${a.reason ? `Reason: ${a.reason}` : ''} (${a.decided_by})
+              </div>
+            </div>
+          `).join("");
+        }
+      } catch (e) {
+        console.error("Failed to load approvals:", e);
+      }
+    }
+
+    async function decideApproval(approvalId, decision) {
+      const tenant = document.getElementById("tenant-select").value;
+      const reason = prompt(`Enter reason for ${decision}:`, decision === 'approved' ? 'Approved by operator' : 'Action unsafe at this time');
+      if (reason === null) return;
+
+      try {
+        const res = await fetch(`/admin/approvals/${approvalId}/decide?tenant=${tenant}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer relay-admin-secret-dev-token"
+          },
+          body: JSON.stringify({ decision: decision, reason: reason || 'Decided by operator' })
+        });
+        if (res.ok) {
+          loadApprovals();
+          loadGraph();
+        } else {
+          alert(`Failed to decide: ${await res.text()}`);
+        }
+      } catch (e) {
+        alert("Error deciding approval: " + e);
+      }
+    }
+
+    // Feature 4: Baseline Comparison Loader
+    async function loadComparisonBenchmark() {
+      try {
+        const res = await fetch("/admin/compare/latest", {
+          headers: { "Authorization": "Bearer relay-admin-secret-dev-token" }
+        });
+        if (!res.ok) return;
+        const d = await res.json();
+        const s = d.summary;
+        if (!s) return;
+
+        const tbody = document.getElementById("baseline-cmp-tbody");
+        tbody.innerHTML = `
+          <tr>
+            <td><b>1. Concurrency Race</b><br><span style="color:var(--text-muted);">${s.concurrency.check}</span></td>
+            <td style="color: var(--procedural); font-weight:bold;">${s.concurrency.relay}</td>
+            <td style="color: #ef4444; font-weight:bold;">${s.concurrency.baseline}</td>
+          </tr>
+          <tr>
+            <td><b>2. As-Of Correction</b><br><span style="color:var(--text-muted);">${s.correction.check}</span></td>
+            <td style="color: var(--procedural); font-weight:bold;">${s.correction.relay}</td>
+            <td style="color: #ef4444; font-weight:bold;">${s.correction.baseline}</td>
+          </tr>
+          <tr>
+            <td><b>3. Isolation Boundary</b><br><span style="color:var(--text-muted);">${s.isolation.check}</span></td>
+            <td style="color: var(--procedural); font-weight:bold;">${s.isolation.relay}</td>
+            <td style="color: #ef4444; font-weight:bold;">${s.isolation.baseline}</td>
+          </tr>
+        `;
+      } catch (e) {
+        console.error("Failed to load baseline comparison:", e);
+      }
+    }
+
+    // Chaos Button Kill Agent
+    async function killAgent(role) {
+      const tenant = document.getElementById("tenant-select").value;
+      const statusEl = document.getElementById("chaos-status");
+      statusEl.innerText = `Killing agent_${role}...`;
+      try {
+        const res = await fetch("/admin/chaos/kill-agent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer relay-admin-secret-dev-token"
+          },
+          body: JSON.stringify({ tenant: tenant, agent_role: role })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          statusEl.innerText = `💥 Killed agent_${role}. Held tasks: ${d.held_tasks.length}. Waiting for lease expiry...`;
+          loadGraph();
+        } else {
+          statusEl.innerText = `Kill error: ${JSON.stringify(d.error || d)}`;
+        }
+      } catch (e) {
+        statusEl.innerText = `Failed to kill agent: ${e}`;
+      }
+    }
+
+    // Surviving Agent Reclaims Task
+    async function reclaimTask(taskId, role) {
+      const tenant = document.getElementById("tenant-select").value;
+      const statusEl = document.getElementById("chaos-status");
+      statusEl.innerText = `Surviving agent_${role} reclaiming task ${taskId}...`;
+      try {
+        const res = await fetch("/admin/chaos/reclaim-task", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer relay-admin-secret-dev-token"
+          },
+          body: JSON.stringify({ tenant: tenant, agent_role: role, task_id: taskId })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          statusEl.innerText = `✅ Task ${taskId} successfully reclaimed by agent_${role}!`;
+          loadGraph();
+        }
+      } catch (e) {
+        console.error("Reclaim error:", e);
       }
     }
 
@@ -618,8 +1279,29 @@
     // SSE connection
     function connectSSE() {
       const sse = new EventSource("/admin/stream");
-      sse.addEventListener("update", () => {
+      sse.addEventListener("update", (ev) => {
+        try {
+          const payload = JSON.parse(ev.data);
+          const type = payload.type;
+          const statusEl = document.getElementById("chaos-status");
+          if (type === "agent_killed") {
+            statusEl.innerText = `💥 Agent ${payload.data.agent_id} killed! Claimed task lease expiring...`;
+          } else if (type === "lease_expired") {
+            statusEl.innerText = `⌛ Lease expired for task ${payload.data.task_id}.`;
+          } else if (type === "task_reopened") {
+            statusEl.innerText = `🔄 Task ${payload.data.task_id} re-opened by reaper! Waiting for surviving agent reclaim...`;
+            // Auto trigger surviving agent reclaim in demo mode if investigator survives
+            reclaimTask(payload.data.task_id, "investigator");
+          } else if (type === "task_reclaimed") {
+            statusEl.innerText = `🎉 Task ${payload.data.task_id} reclaimed by ${payload.data.claimed_by} (v${payload.data.version})!`;
+          } else if (type === "approval_requested") {
+            loadApprovals();
+          } else if (type === "approval_decided") {
+            loadApprovals();
+          }
+        } catch (e) {}
         loadGraph();
+        loadApprovals();
       });
       sse.onerror = () => {
         document.getElementById("sse-status").innerText = "Stream Reconnecting...";
@@ -632,6 +1314,7 @@
     window.addEventListener("DOMContentLoaded", () => {
       initGraph();
       connectSSE();
+      loadComparisonBenchmark();
     });
   </script>
 </body>

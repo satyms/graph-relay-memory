@@ -32,16 +32,18 @@ Target: a **3-minute** video that shows five proofs with the graph visible the w
 
 ## 2. Storyboard (3:00)
 
-| Time | On screen | Narration (short) | Proof |
+| Time | On screen | Narration (short) | Proof / Feature |
 |---|---|---|---|
 | 0:00 to 0:15 | Title, one-line problem, dashboard with empty graph | "Agents forget and collide. Relay gives them a shared graph memory in FalkorDB." | Setup |
-| 0:15 to 0:50 | Triage opens INC-1, creates hypothesis and tasks, hands off to Investigator. Handoff node appears with open questions | "Triage doesn't pass a chat log. It writes a handoff node with context and open questions." | Handoffs, shared state |
-| 0:50 to 1:20 | Investigator accepts, claims a task, attaches evidence, rules out `auth-svc`, hands off to Remediator. Blast radius highlights affected services | "Every claim carries a lease, and every conclusion links to evidence." | Provenance, MCP tool selection |
-| 1:20 to 1:55 | Remediator picks `restart-redis`, it fails, `violated_assumption` is recorded, new version with a precondition appears. Re-run chooses `rollback-deploy` and succeeds | "Failure doesn't vanish. The procedure forks with a new precondition." | Procedural learning |
-| 1:55 to 2:15 | Correct `payments-svc` owner; run `query_facts(as_of=earlier)` and show both values with the `SUPERSEDES` edge | "We can ask what we believed at 2pm." | Time travel |
-| 2:15 to 2:40 | Kill all agents, restart one. It calls `start_session` and recalls INC-1 | "New process, same memory." | Persistence |
-| 2:40 to 2:55 | Load test: 20 agents, 10 tasks, counters show 10 winners, 0 duplicates. Then isolation test: Acme key asks for Globex node, blocked | "Concurrency is safe and tenants can't see each other." | Concurrency, isolation |
-| 2:55 to 3:00 | Repo link, track name | "Relay. Track 02." | Close |
+| 0:15 to 0:40 | Triage opens INC-1, creates hypothesis and tasks, hands off to Investigator. Handoff node appears with open questions | "Triage doesn't pass a chat log. It writes a typed handoff node with context and open questions." | Coordination (Handoffs) |
+| 0:40 to 1:05 | Investigator accepts, claims task, attaches evidence. Click any node: **Click-to-Explain** side drawer shows full provenance chain & deterministic 'because' summary | "Every claim carries a lease, and every conclusion links to evidence. One click explains *why* Relay believes it." | **Feature 3: Click-to-Explain** |
+| 1:05 to 1:35 | Remediator picks `rollback-deploy` (risky action). **Approval Gate** halts execution. Admin dashboard card approves; agent completes task | "Risky actions require human-in-the-loop signoff. Remediator cannot complete the task until an admin signs off." | **Feature 5: Approval Gate** |
+| 1:35 to 1:55 | Remediator records procedure outcome; forks runbook on failure. Ownership of `payments-svc` corrected from `Team Core` to `Team Billing` | "Failure forks a runbook with new preconditions. Knowledge corrections preserve history instead of overwriting." | Procedural learning & supersession |
+| 1:55 to 2:15 | **Time-Travel Slider** dragged to earlier point: shows Team Core fact as valid, Billing hidden. Drag to live: Billing active, Core dimmed | "We can drag time backwards to inspect what our agents believed 30 minutes ago, then jump back to live." | **Feature 2: Time-Travel Slider** |
+| 2:15 to 2:35 | **Chaos Button**: Click 'Kill Agent' on active Remediator. Task lease counts down (10s), reaper expires lease, survivor reclaims task | "Chaos in production: kill an agent mid-task, its lease safely expires, and a surviving teammate auto-reclaims work." | **Feature 1: Chaos Button** |
+| 2:35 to 2:55 | **Baseline Comparison**: Live dashboard table comparing Relay vs Flat Memory on Concurrency (0 vs duplicate claims), History, & Tenant Isolation | "Here is Relay head-to-head with standard flat memory: zero duplicate claims, true temporal memory, and hard tenant isolation." | **Feature 4: Baseline Comparison** |
+| 2:55 to 3:00 | Repo link, track name | "Relay. Graph-native agent memory on FalkorDB. Track 02." | Close |
+
 
 ## 3. Pre-demo setup
 

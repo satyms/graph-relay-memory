@@ -161,6 +161,16 @@ Shows why the system believes something.
 - **In:** `node_id` (fact, hypothesis or task)
 - **Out:** provenance chain (supersedes, derived-from events, evidence) as nodes and edges the dashboard can draw
 
+### `request_approval`
+Request human-in-the-loop admin approval before executing risky actions (`rollback_deploy`, `restart_service`, `scale_down`). Role rule: restricted to `remediator`.
+- **In:** `task_id`, `action`, `justification`, `target?`
+- **Out:** `{ok: true, approval_id, task_id, action, status: "pending", requested_at}`
+
+### `check_approval`
+Check decision status of an approval gate.
+- **In:** `approval_id`
+- **Out:** `{ok: true, approval: {approval_id, action, target, requested_by, status, reason, justification, requested_at, decided_at, decided_by}}`
+
 ---
 
 ## 6. Admin endpoints (not MCP tools, not visible to agents)
@@ -170,7 +180,14 @@ Shows why the system believes something.
 | `POST /admin/tenants` | Create tenant graph and issue agent keys |
 | `POST /admin/consolidate` | Run consolidation now (for deterministic demos) |
 | `GET /admin/stream` | SSE feed of graph changes for the dashboard |
-| `GET /admin/graph/{tenant}` | Snapshot for the dashboard (admin token required) |
+| `GET /admin/graph/{tenant}?as_of=<ms>` | Snapshot for dashboard, with optional historical point-in-time filtering |
+| `GET /admin/timeline/{tenant}` | Min/max timestamps and key change markers for time travel |
+| `GET /admin/explain/{tenant}/{node_id}` | Provenance chain nodes/edges and deterministic "because" rationale |
+| `POST /admin/chaos/kill-agent` | Chaos button: abort agent mid-task without releasing claim for lease expiry demo |
+| `POST /admin/chaos/reclaim-task` | Surviving agent recovery of re-opened expired tasks |
+| `GET /admin/approvals?tenant=...` | List pending and decided approval requests |
+| `POST /admin/approvals/{id}/decide` | Human-in-the-loop decision: approve or reject risky agent actions |
+| `GET /admin/compare/latest` | Concurrency, Correction, and Isolation comparison vs flat memory baseline |
 
 ---
 
@@ -180,7 +197,7 @@ Shows why the system believes something.
 |---|---|
 | `triage` | all episodic and semantic tools, `open_incident`, `create_task`, `add_hypothesis`, `create_handoff` |
 | `investigator` | read tools, `claim_task`, `attach_evidence`, `add_hypothesis`, `create_handoff`, `blast_radius` |
-| `remediator` | read tools, `find_procedure`, `record_outcome`, `claim_task`, `complete_task`, `create_handoff` |
+| `remediator` | read tools, `find_procedure`, `record_outcome`, `claim_task`, `complete_task`, `create_handoff`, `request_approval`, `check_approval` |
 | `comms` | read tools, `log_event`, `upsert_fact`, `accept_handoff` |
 
 Role checks are optional for the MVP but make a clean "read vs write separation" story.

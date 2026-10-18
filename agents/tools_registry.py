@@ -28,7 +28,9 @@ from server.app.tools.coordination import (
     add_hypothesis_handler,
     attach_evidence_handler,
     create_handoff_handler,
-    accept_handoff_handler
+    accept_handoff_handler,
+    request_approval_handler,
+    check_approval_handler
 )
 from server.app.tools.procedural import (
     find_procedure_handler,
@@ -296,6 +298,37 @@ TOOL_DEFINITIONS = [
                 "required": ["node_id"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "request_approval",
+            "description": "Request human admin approval for high-risk actions (rollback_deploy, restart_service, scale_down). Restricted to remediator role.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "string"},
+                    "action": {"type": "string", "enum": ["rollback_deploy", "restart_service", "scale_down"]},
+                    "justification": {"type": "string"},
+                    "target": {"type": "string"}
+                },
+                "required": ["task_id", "action", "justification"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_approval",
+            "description": "Check status of a pending approval request.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "approval_id": {"type": "string"}
+                },
+                "required": ["approval_id"]
+            }
+        }
     }
 ]
 
@@ -322,6 +355,8 @@ def dispatch_tool_call(ctx: AuthContext, name: str, args: Dict[str, Any]) -> Dic
         "attach_evidence": lambda: attach_evidence_handler(ctx, **args),
         "create_handoff": lambda: create_handoff_handler(ctx, **args),
         "accept_handoff": lambda: accept_handoff_handler(ctx, **args),
+        "request_approval": lambda: request_approval_handler(ctx, **args),
+        "check_approval": lambda: check_approval_handler(ctx, **args),
         "find_procedure": lambda: find_procedure_handler(ctx, **args),
         "record_outcome": lambda: record_outcome_handler(ctx, **args),
         "blast_radius": lambda: blast_radius_handler(ctx, **args),
