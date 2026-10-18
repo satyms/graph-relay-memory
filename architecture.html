@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relay architecture</title>
+<style>
+:root{
+  --bg:#0f1626;--surface:#172036;--text:#e8edf7;--muted:#9aa8c2;--line:#34415f;
+  --epi:#f2b544;--sem:#45c2b8;--pro:#b796f5;--coo:#f07a6e;--ins:#6fa3f2;--agt:#c9d4ea;--inf:#8795b3;--db:#7d8fb8;--llm:#e8edf7;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --bg:#f5f7fb;--surface:#ffffff;--text:#14203a;--muted:#53617f;--line:#c9d2e3;
+    --epi:#b9791a;--sem:#1c8c85;--pro:#7b55d1;--coo:#cc4e41;--ins:#2f6fd1;--agt:#3a4d75;--inf:#5b6b8c;--db:#4a5d86;--llm:#14203a;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f5f7fb;--surface:#ffffff;--text:#14203a;--muted:#53617f;--line:#c9d2e3;
+  --epi:#b9791a;--sem:#1c8c85;--pro:#7b55d1;--coo:#cc4e41;--ins:#2f6fd1;--agt:#3a4d75;--inf:#5b6b8c;--db:#4a5d86;--llm:#14203a;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;padding:clamp(16px,4vw,40px);color:var(--text);background:var(--bg);
+  font-family:"Avenir Next","Segoe UI Variable","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto}
+h1{font-size:clamp(24px,3.4vw,34px);line-height:1.15;margin:0 0 8px;font-weight:650;letter-spacing:-.01em}
+.lede{margin:0 0 20px;color:var(--muted);max-width:68ch}
+.bar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:12px}
+button{font:inherit;font-weight:600;color:var(--text);background:var(--surface);border:1.5px solid var(--line);
+  border-radius:8px;padding:8px 14px;cursor:pointer}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+button:focus-visible,.node:focus-visible{outline:2px solid var(--ins);outline-offset:3px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-left:auto;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+#caption{min-height:3em;margin:0 0 12px;padding:10px 14px;border-left:3px solid var(--line);color:var(--text);
+  background:var(--surface);border-radius:0 8px 8px 0}
+.diagram{overflow-x:auto;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
+svg{display:block;width:100%;min-width:820px;height:auto}
+.box{fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:5 5}
+.clabel{fill:var(--muted);font-size:13px}
+.arrow{stroke:var(--muted);stroke-width:1.4;fill:none;opacity:.7}
+.tip{fill:var(--muted)}
+.node{cursor:pointer;transition:opacity .2s}
+.node rect{fill:var(--surface);fill:color-mix(in srgb,var(--c) 13%,var(--surface));stroke:var(--c);stroke-width:1.5;transition:stroke-width .15s}
+.node .t{fill:var(--text);font-size:15px;font-weight:650}
+.node .s{fill:var(--muted);font-size:12px}
+.node:hover rect,.node.sel rect{stroke-width:3}
+.epi{--c:var(--epi)}.sem{--c:var(--sem)}.pro{--c:var(--pro)}.coo{--c:var(--coo)}.ins{--c:var(--ins)}
+.agt{--c:var(--agt)}.inf{--c:var(--inf)}.db{--c:var(--db)}.llm{--c:var(--llm)}
+.tracing .node{opacity:.28}
+.tracing .node.done,.tracing .node.on{opacity:1}
+.tracing .node.on rect{stroke-width:4}
+#detail{margin-top:14px;padding:18px 20px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
+#detail h3{margin:0 0 4px;font-size:20px}
+#detail .file{margin:0 0 10px;color:var(--muted);font-size:13px;font-family:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace}
+#detail p{margin:0 0 10px;max-width:72ch}
+#detail .proof{padding:8px 12px;border-left:3px solid var(--sem);background:var(--bg);border-radius:0 8px 8px 0;font-size:14px}
+#detail pre{margin:10px 0 0;padding:12px 14px;overflow-x:auto;background:var(--bg);border-radius:8px;font-size:13px;line-height:1.5;
+  font-family:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace}
+.note{margin:6px 0 0;font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){.node,.node rect{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>How a tool call moves through Relay</h1>
+  <p class="lede">Agents never touch the database. Every read and write passes through one memory server that decides the tenant, runs parameterised Cypher, and writes the result to FalkorDB. Select any box, or trace a real call.</p>
+
+  <div class="bar">
+    <button class="primary" id="go" type="button">Trace claim_task</button>
+    <button id="reset" type="button">Reset</button>
+    <div class="legend" aria-label="Memory type colors">
+      <span><i style="background:var(--epi)"></i>Episodic</span>
+      <span><i style="background:var(--sem)"></i>Semantic</span>
+      <span><i style="background:var(--pro)"></i>Procedural</span>
+      <span><i style="background:var(--coo)"></i>Coordination</span>
+      <span><i style="background:var(--ins)"></i>Insight</span>
+    </div>
+  </div>
+  <p id="caption" aria-live="polite">Select any box to see what it does and which file implements it.</p>
+
+  <div class="diagram">
+    <svg id="arch" viewBox="0 0 1000 730" role="group" aria-label="Relay architecture diagram">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path class="tip" d="M1 1L9 5L1 9z"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div id="detail" aria-live="polite"></div>
+  <p class="note">Query shapes are representative. The exact text lives in <code>server/app/queries/</code>.</p>
+</div>
+
+<script>
+(function(){
+var NS='http://www.w3.org/2000/svg';
+var svg=document.getElementById('arch');
+function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e;}
+
+/* id, class, x, y, w, h, title, subtitle */
+var nodes=[
+['a-triage','agt',32,24,140,64,'Triage','Opens the incident'],
+['a-invest','agt',186,24,140,64,'Investigator','Gathers evidence'],
+['a-remed','agt',340,24,140,64,'Remediator','Runs runbooks'],
+['a-comms','agt',494,24,140,64,'Comms','Reports back'],
+['llm','llm',690,24,278,64,'Model adapter and OpenVINO','Local Qwen2.5-7B INT4, or cloud'],
+['auth','inf',60,182,280,56,'Auth and tenant binding','Bearer key to AuthContext'],
+['tools','inf',360,182,280,56,'Tool dispatch','Model tool calls to handlers'],
+['audit','inf',660,182,280,56,'Audit log','Every call recorded'],
+['svc-epi','epi',32,290,176,60,'Episodic','Session timelines'],
+['svc-sem','sem',222,290,176,60,'Semantic','Facts, supersession'],
+['svc-pro','pro',412,290,176,60,'Procedural','Ranked runbooks'],
+['svc-coo','coo',602,290,176,60,'Coordination','Claims, leases, handoffs'],
+['svc-ins','ins',792,290,176,60,'Insight','PageRank, blast radius'],
+['query','inf',32,384,936,56,'Query layer','execute_query for writes, execute_ro_query for reads, parameters only'],
+['db-acme','db',46,516,215,66,'Tenant graph: Acme','Isolated memory'],
+['db-globex','db',277,516,215,66,'Tenant graph: Globex','Isolated memory'],
+['db-ctrl','db',508,516,215,66,'control graph','Tenants, hashed keys, audit'],
+['db-shared','db',739,516,215,66,'shared_runbooks','Read-only starter runbooks'],
+['consol','inf',46,646,215,60,'Consolidation worker','Events to derived facts'],
+['reaper','coo',277,646,215,60,'Lease reaper','Reopens expired claims'],
+['sse','inf',508,646,190,60,'SSE event feed','Live graph changes'],
+['dash','inf',744,646,210,60,'Dashboard and showcase','D3 graph, proofs']
+];
+
+/* containers */
+el('rect',{'class':'box',x:32,y:148,width:936,height:104,rx:12},svg);
+var t1=el('text',{'class':'clabel',x:52,y:170},svg);t1.textContent='FastAPI memory server';
+el('rect',{'class':'box',x:32,y:474,width:936,height:124,rx:12},svg);
+var t2=el('text',{'class':'clabel',x:52,y:496},svg);t2.textContent='FalkorDB';
+
+/* arrows: x1,y1,x2,y2,both */
+var arrows=[];
+[102,256,410,564].forEach(function(c){arrows.push([c,88,c,146,1]);});
+arrows.push([634,56,690,56,1]);
+[120,310,500,690,880].forEach(function(c){arrows.push([c,252,c,288,1]);arrows.push([c,350,c,384,1]);});
+[153.5,384.5,615.5,846.5].forEach(function(c){arrows.push([c,440,c,474,1]);});
+arrows.push([153.5,598,153.5,644,1],[384.5,598,384.5,644,1],[603,598,603,644,0],[698,676,744,676,0]);
+arrows.forEach(function(a){
+  var l=el('line',{'class':'arrow',x1:a[0],y1:a[1],x2:a[2],y2:a[3],'marker-end':'url(#ah)'},svg);
+  if(a[4])l.setAttribute('marker-start','url(#ah)');
+});
+
+/* nodes */
+var nodeEls={};
+nodes.forEach(function(n){
+  var g=el('g',{'class':'node '+n[1],'data-id':n[0],tabindex:0,role:'button','aria-label':n[6]+': '+n[7]},svg);
+  el('rect',{x:n[2],y:n[3],width:n[4],height:n[5],rx:9},g);
+  var t=el('text',{'class':'t',x:n[2]+n[4]/2,y:n[3]+n[5]*0.43,'text-anchor':'middle'},g);t.textContent=n[6];
+  var s=el('text',{'class':'s',x:n[2]+n[4]/2,y:n[3]+n[5]*0.72,'text-anchor':'middle'},g);s.textContent=n[7];
+  nodeEls[n[0]]=g;
+});
+
+var CLAIM="MATCH (t:Task {id: $task_id})\nWHERE t.status = 'open'\n   OR (t.status = 'claimed' AND t.lease_expires_at < $now)\nSET t.status = 'claimed', t.owner = $agent_id,\n    t.version = t.version + 1,\n    t.lease_expires_at = $now + $lease_ms\nRETURN t.id, t.version";
+var ASOF="MATCH (e:Entity {name: $name})-[:HAS_FACT]->(f:Fact)\nWHERE f.valid_from <= $t\n  AND (f.valid_to IS NULL OR f.valid_to > $t)\nRETURN f.predicate, f.value";
+
+var D={
+'a-triage':{t:'Triage agent',f:'agents/base.py, agents/scenario.py',d:'Opens the incident, records hypotheses, creates tasks and hands the case to the Investigator through a Handoff node.'},
+'a-invest':{t:'Investigator agent',f:'agents/base.py, agents/scenario.py',d:'Claims investigation tasks, attaches evidence to hypotheses, rules out red herrings such as auth-svc, and hands off to the Remediator.'},
+'a-remed':{t:'Remediator agent',f:'agents/base.py, agents/scenario.py',d:'Looks up ranked procedures, runs the chosen runbook and records the outcome. A failure forks a new procedure version with a precondition.'},
+'a-comms':{t:'Comms agent',f:'agents/base.py, agents/scenario.py',d:'Accepts the final handoff and writes the incident summary and fact updates back into memory.'},
+'llm':{t:'Model adapter and OpenVINO server',f:'agents/llm_adapter.py, server_openvino.py',d:'Agents reach the model through one adapter. The local OpenVINO server runs Qwen2.5-7B INT4 with an OpenAI-compatible tool-calling API. A cloud provider can be swapped in by configuration.'},
+'auth':{t:'Auth and tenant binding',f:'server/app/auth.py, server/app/tenancy.py',d:'Hashes the bearer key, looks it up in the control graph and builds an immutable AuthContext that holds the tenant graph name. Callers cannot pass a tenant or graph name, so identity cannot be spoofed.'},
+'tools':{t:'Tool dispatch',f:'agents/tools_registry.py, server/app/tools/',d:'dispatch_tool_call maps each model tool call to an authenticated handler and returns typed results or error codes.'},
+'audit':{t:'Audit log',f:'server/app/auth.py (log_audit)',d:'Every tool call, allowed or denied, is written to the control graph so any action can be traced afterwards.'},
+'svc-epi':{t:'Episodic memory',f:'server/app/tools/episodic.py',d:'Append-only session timelines: Session to Event, linked in order. Writes carry an idempotency key, so a retry never creates a duplicate event.'},
+'svc-sem':{t:'Semantic memory',f:'server/app/queries/semantic.py, server/app/tools/semantic.py',d:'Facts carry valid_from and valid_to. A correction closes the old fact and links the new one with SUPERSEDES, so an as_of query returns what the agents believed at that moment.',c:ASOF},
+'svc-pro':{t:'Procedural memory',f:'server/app/queries/procedural.py, server/app/tools/procedural.py',d:'Procedures rank by Laplace-smoothed success rate, (successes + 1) / (attempts + 2). A failed outcome forks a new version that carries a precondition, and the old version is retired.'},
+'svc-coo':{t:'Coordination',f:'server/app/queries/coordination.py, server/app/tools/coordination.py',d:'Compare-and-set claims with expiring leases, lease renewal, cascade unblocking, hypotheses, evidence and explicit Handoff nodes.',p:'Measured with scripts/load_test.py on the dev machine: 20 agents racing for 10 tasks, 0 duplicate claims, 1,914 ops/sec, p50 5.26 ms.',c:CLAIM},
+'svc-ins':{t:'Insight tools',f:'server/app/queries/insight.py',d:'Native FalkorDB PageRank ranks critical services, breadth-first search computes blast radius, and explain walks provenance back to source events.'},
+'query':{t:'Query layer',f:'server/app/graph.py',d:'execute_query handles writes and execute_ro_query handles reads. Both take parameters only, and no tool accepts raw Cypher from a caller.'},
+'db-acme':{t:'Tenant graph: Acme',f:'server/app/tenancy.py',d:'Each tenant owns a separate FalkorDB graph, so a query against one cannot see another. Acme holds the demo incident INC-1.',p:'Measured with scripts/isolation_test.py: 7 attack scenarios, 0 cross-tenant reads.'},
+'db-globex':{t:'Tenant graph: Globex',f:'server/app/tenancy.py',d:'A second tenant with the same service names and different facts. It is the target for the cross-tenant isolation proof.',p:'Measured with scripts/isolation_test.py: 7 attack scenarios, 0 cross-tenant reads.'},
+'db-ctrl':{t:'control graph',f:'server/app/queries/control.py',d:'Stores tenants, SHA-256 hashed API keys and audit entries. Only the server reads it.'},
+'db-shared':{t:'shared_runbooks',f:'server/app/queries/procedural.py',d:'Starter runbooks every tenant can find through find_procedure. No tool writes to it.'},
+'consol':{t:'Consolidation worker',f:'server/app/consolidation.py',d:'Derives semantic facts from session events with DERIVED_FROM links, and marks stale low-confidence facts so they drop out of default recall.'},
+'reaper':{t:'Lease reaper',f:'server/app/main.py (_reaper_background_loop)',d:'Reopens tasks whose lease has expired. If an agent dies mid-task, another agent claims the work without human help.'},
+'sse':{t:'SSE event feed',f:'server/app/main.py (broadcast_event, stream_events)',d:'Pushes each graph change to connected dashboards as it happens.'},
+'dash':{t:'Dashboard and showcase',f:'server/app/main.py, dashboard assets',d:'D3 graph view fed by the SSE feed and the graph snapshot endpoints. It shows handoffs, claims, supersession chains and proof results.'}
+};
+
+var detail=document.getElementById('detail');
+function show(id){
+  var n=D[id];if(!n)return;
+  detail.replaceChildren();
+  var h=document.createElement('h3');h.textContent=n.t;detail.appendChild(h);
+  var f=document.createElement('p');f.className='file';f.textContent=n.f;detail.appendChild(f);
+  var d=document.createElement('p');d.textContent=n.d;detail.appendChild(d);
+  if(n.p){var p=document.createElement('p');p.className='proof';p.textContent=n.p;detail.appendChild(p);}
+  if(n.c){var pre=document.createElement('pre');pre.textContent=n.c;detail.appendChild(pre);}
+  Object.keys(nodeEls).forEach(function(k){nodeEls[k].classList.toggle('sel',k===id);});
+}
+show('svc-coo');
+
+Object.keys(nodeEls).forEach(function(id){
+  var g=nodeEls[id];
+  g.addEventListener('click',function(){show(id);});
+  g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();show(id);}});
+});
+
+/* trace of one claim_task call */
+var T=[
+['a-remed','The Remediator sends claim_task with its bearer key.'],
+['auth','The key is hashed and resolved to an AuthContext. The tenant graph comes from this lookup, never from the request.'],
+['tools','dispatch_tool_call routes the call to the coordination handler. The attempt is audited.'],
+['svc-coo','The handler runs one compare-and-set query that matches only open tasks or tasks with an expired lease.'],
+['query','execute_query sends the parameterised Cypher to the tenant graph.'],
+['db-acme','FalkorDB applies the write atomically. One agent gets a row back, and the rest get CONFLICT.'],
+['sse','The change is broadcast as an event.'],
+['dash','The dashboard graph updates. The task turns claimed and its lease countdown starts.']
+];
+var caption=document.getElementById('caption'),DEFAULT=caption.textContent,idx=-1,timer=null;
+function clearMarks(){Object.keys(nodeEls).forEach(function(k){nodeEls[k].classList.remove('on','done');});}
+function next(){
+  idx++;
+  if(idx>=T.length){clearInterval(timer);timer=null;caption.textContent='Done. One claim, one owner, every step recorded.';
+    nodeEls[T[T.length-1][0]].classList.remove('on');nodeEls[T[T.length-1][0]].classList.add('done');return;}
+  if(idx>0){var prev=nodeEls[T[idx-1][0]];prev.classList.remove('on');prev.classList.add('done');}
+  nodeEls[T[idx][0]].classList.add('on');
+  caption.textContent=(idx+1)+' of '+T.length+'. '+T[idx][1];
+  show(T[idx][0]);
+}
+function reset(){
+  if(timer){clearInterval(timer);timer=null;}
+  idx=-1;clearMarks();svg.classList.remove('tracing');caption.textContent=DEFAULT;
+}
+document.getElementById('go').addEventListener('click',function(){
+  reset();svg.classList.add('tracing');next();timer=setInterval(next,2600);
+});
+document.getElementById('reset').addEventListener('click',reset);
+})();
+</script>
+</body>
+</html>

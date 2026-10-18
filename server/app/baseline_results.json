@@ -1,10 +1,10 @@
 {
-  "timestamp": 1792312632527,
+  "timestamp": 1792315426081,
   "summary": {
     "concurrency": {
       "check": "20 workers race for 10 tasks (duplicate claims)",
       "relay": "0 duplicate claims",
-      "baseline": "157 duplicate claims",
+      "baseline": "151 duplicate claims",
       "verdict": "Relay atomic CAS prevents duplicates; Baseline suffers race conditions"
     },
     "correction": {
@@ -31,7 +31,7 @@
       "baseline": {
         "tasks_offered": 10,
         "tasks_claimed": 10,
-        "duplicate_claims": 157,
+        "duplicate_claims": 151,
         "safe": false
       }
     },
