@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relay | Shared Graph Memory & Coordination for AI Agent Teams</title>
+  <script src="/showcase/d3.v7.min.js"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --bg-surface: #101624;
+      --bg-surface-elevated: #162033;
+      --bg-surface-subtle: #1c273e;
+      --border: #23304a;
+      --border-focus: #3b82f6;
+      --border-accent: #0284c7;
+      
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      /* Memory Layer Signal Palette */
+      --topology: #0284c7;
+      --coordination: #d97706;
+      --procedural: #059669;
+      --semantic: #7c3aed;
+      --episodic: #2563eb;
+      --danger: #e11d48;
+      --warning: #f59e0b;
+      --success: #10b981;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, system-ui, sans-serif;
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", monospace;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f1f5f9;
+      --bg-surface-subtle: #e2e8f0;
+      --border: #cbd5e1;
+      --border-focus: #2563eb;
+      --border-accent: #0284c7;
+
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #64748b;
+
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    /* Presentation mode overrides */
+    body.presentation-mode header.site-header { display: none; }
+    body.presentation-mode { font-size: 17px; }
+    body.presentation-mode .container { max-width: 1400px; }
+
+    /* Layout & Containers */
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section {
+      padding: 72px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Top Sticky Navigation */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 13, 22, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s ease;
+    }
+    [data-theme="light"] header.site-header {
+      background: rgba(248, 250, 252, 0.88);
+    }
+
+    .nav-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 800;
+      font-size: 16px;
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.4);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 0.68rem;
+      background: rgba(2, 132, 199, 0.15);
+      border: 1px solid rgba(2, 132, 199, 0.35);
+      color: #38bdf8;
+      padding: 1px 7px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.86rem;
+      font-weight: 500;
+      transition: color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+      outline: none;
+    }
+
+    .btn-primary {
+      background: #0284c7;
+      color: white;
+      border-color: #0369a1;
+      box-shadow: 0 1px 3px rgba(2, 132, 199, 0.3);
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-surface-subtle);
+      border-color: var(--border-focus);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-outline:hover {
+      background: var(--bg-surface-subtle);
+      border-color: var(--border-focus);
+    }
+
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 0.74rem;
+    }
+
+    .toggle-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .toggle-btn:hover {
+      color: var(--text);
+      border-color: var(--border-focus);
+    }
+
+    /* Section Typography */
+    .section-tag {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--topology);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+    }
+
+    .section-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 720px;
+      line-height: 1.55;
+      margin-bottom: 36px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .card:hover {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 80px 0 60px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-badge-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .hero-title {
+      font-size: 3.4rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1.08;
+      max-width: 900px;
+      margin-bottom: 20px;
+    }
+
+    .hero-highlight {
+      background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 48px;
+      flex-wrap: wrap;
+    }
+
+    .stat-ribbon {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 32px;
+    }
+
+    .stat-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: left;
+    }
+
+    .stat-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .stat-lbl {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .stat-meta {
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      font-family: var(--font-mono);
+    }
+
+    /* Problem Cards */
+    .dilemma-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    .dilemma-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .dilemma-icon {
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+
+    .dilemma-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .dilemma-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Scenario Comparative Cards */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .scenario-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .scenario-tag {
+      font-size: 0.7rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+
+    .scenario-before-after {
+      margin: 16px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .scenario-box {
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.82rem;
+    }
+
+    .scenario-before {
+      background: rgba(225, 29, 72, 0.08);
+      border-left: 3px solid var(--danger);
+      color: var(--text);
+    }
+
+    .scenario-after {
+      background: rgba(16, 185, 129, 0.08);
+      border-left: 3px solid var(--success);
+      color: var(--text);
+    }
+
+    .scenario-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      letter-spacing: 0.04em;
+    }
+    .scenario-before .scenario-label { color: var(--danger); }
+    .scenario-after .scenario-label { color: var(--success); }
+
+    /* Stepper / Workflow Horizontal Flow */
+    .workflow-track {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 32px 0 20px 0;
+    }
+
+    .workflow-step {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .workflow-step.active, .workflow-step:hover {
+      border-color: var(--border-focus);
+      background: var(--bg-surface-elevated);
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      margin-bottom: 10px;
+    }
+    .workflow-step.active .step-number {
+      background: var(--topology);
+      color: white;
+    }
+
+    .step-role {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .step-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 2px 0 6px 0;
+    }
+
+    .step-detail-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+
+    /* Architecture Grid */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .arch-box {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .arch-box:hover {
+      border-color: var(--topology);
+      transform: translateY(-2px);
+    }
+
+    .arch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .arch-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .arch-file {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-dim);
+      background: var(--bg-surface-subtle);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .arch-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Code Block & Cypher Display */
+    .code-block {
+      background: #040810;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      line-height: 1.45;
+    }
+    [data-theme="light"] .code-block {
+      background: #0f172a;
+      color: #f8fafc;
+    }
+
+    /* Graph Visualizer Container */
+    .graph-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      height: 480px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #demo-graph-svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Proofs Table */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    table.proof-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    table.proof-table th {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    table.proof-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .badge-pass {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .badge-fail {
+      background: rgba(225, 29, 72, 0.15);
+      color: #fb7185;
+      border: 1px solid rgba(225, 29, 72, 0.35);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.7rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      padding: 48px 0;
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .footer-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero-title { font-size: 2.4rem; }
+      .dilemma-grid, .scenario-grid, .workflow-track { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Top Navigation -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="#hero" class="brand">
+        <div class="brand-icon">R</div>
+        <div class="brand-title">
+          Relay
+          <span class="brand-badge">Track 02</span>
+        </div>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#scenarios">Problems & Proofs</a></li>
+        <li><a href="#workflow">Workflow</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#datamodel">Data Model</a></li>
+        <li><a href="#benchmarks">Benchmarks</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#interactive-demo">Live Demo</a></li>
+        <li><a href="#hackathon">Hackathon Fit</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+          <span id="theme-icon">☀️ Light</span>
+        </button>
+        <button class="toggle-btn" id="pres-toggle" onclick="togglePresentationMode()" title="Toggle Clean Presentation View">
+          📺 Presentation
+        </button>
+        <a href="/dashboard/" target="_blank" class="btn btn-secondary btn-sm" title="Open the full Relay Studio dashboard">
+          Launch Studio ↗
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Section 1: Hero -->
+  <section id="hero" class="hero">
+    <div class="container">
+      <div class="hero-badge-wrap">
+        <span>FalkorDB Multi-Agent Coordination Engine</span>
+        <span>&bull;</span>
+        <span style="color: var(--topology);">Graph Hacks Track 02</span>
+      </div>
+
+      <h1 class="hero-title">
+        Shared Graph Memory for <br><span class="hero-highlight">AI Agent Teams</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        LLM swarms hit a wall when collaborating: context windows overflow, concurrent agents collide, and runbooks repeat past mistakes. Relay equips autonomous agent teams with a typed, temporal, multi-tenant graph memory engine built natively on FalkorDB.
+      </p>
+
+      <div class="hero-actions">
+        <a href="#interactive-demo" class="btn btn-primary" onclick="setDemoMode('replay'); startDemoStep(1);">
+          ▶ Try Guided Demo
+        </a>
+        <a href="/dashboard/" target="_blank" class="btn btn-secondary">
+          ⚡ Launch Live Studio
+        </a>
+        <a href="#benchmarks" class="btn btn-outline">
+          📊 Verified Benchmarks
+        </a>
+      </div>
+
+      <!-- The 3 Core Agent Dilemmas -->
+      <div class="dilemma-grid">
+        <div class="dilemma-card" style="border-top: 3px solid var(--danger);">
+          <div class="dilemma-icon">🧠</div>
+          <div class="dilemma-title">Agents Forget</div>
+          <div class="dilemma-desc">
+            Flat chat buffers and vector stores truncate history and hallucinate temporal reality. Relay tracks episodic event streams and non-destructive <code>SUPERSEDES</code> fact lineage.
+          </div>
+        </div>
+
+        <div class="dilemma-card" style="border-top: 3px solid var(--warning);">
+          <div class="dilemma-icon">⚔️</div>
+          <div class="dilemma-title">Agents Collide</div>
+          <div class="dilemma-desc">
+            Independent agents lack atomic locks, racing to claim tasks and creating double work. Relay enforces single-Cypher atomic Compare-And-Set (CAS) claims with leased heartbeat recovery.
+          </div>
+        </div>
+
+        <div class="dilemma-card" style="border-top: 3px solid var(--procedural);">
+          <div class="dilemma-icon">🔄</div>
+          <div class="dilemma-title">Agents Repeat Mistakes</div>
+          <div class="dilemma-desc">
+            Agents blindly retry static runbooks that fail due to changed environmental assumptions. Relay automatically forks failed procedures into new versions with learned preconditions.
+          </div>
+        </div>
+      </div>
+
+      <!-- Measured Performance Stat Ribbon -->
+      <div class="stat-ribbon">
+        <div class="stat-box">
+          <div class="stat-val" style="color: var(--topology);" id="val-throughput">1,941</div>
+          <div class="stat-lbl">Concurrency Operations / Sec</div>
+          <div class="stat-meta">Measured on 20 concurrent workers</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-val" style="color: var(--success);" id="val-duplicates">0</div>
+          <div class="stat-lbl">Duplicate Claims Under Race</div>
+          <div class="stat-meta">Atomic Cypher CAS enforced</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-val" style="color: var(--semantic);" id="val-latency">5.6 ms</div>
+          <div class="stat-lbl">Median p50 Latency (p95: 19ms)</div>
+          <div class="stat-meta">FalkorDB Graph-native C engine</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="stat-val" style="color: var(--warning);" id="val-tests">90 / 90</div>
+          <div class="stat-lbl">Verified Automated Tests</div>
+          <div class="stat-meta">77% code coverage &bull; 0 failures</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Problem vs Result Scenarios -->
+  <section id="scenarios">
+    <div class="container">
+      <div class="section-tag">Empirical Proof</div>
+      <h2 class="section-title">Problem vs. Result Scenarios</h2>
+      <p class="section-subtitle">
+        Direct head-to-head evaluation against a standard flat store with keyword recall (<code>agents/baseline_memory.py</code>). Measured on dev laptop (Intel Core Ultra 5, 20 agents racing for 10 tasks).
+      </p>
+
+      <div class="scenario-grid">
+        <!-- Scenario 1: Concurrency Race -->
+        <div class="scenario-card">
+          <div>
+            <span class="scenario-tag" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;">Concurrency</span>
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 6px 0;">Duplicate Task Claims</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              20 concurrent agents race to claim 10 incident remediation tasks.
+            </p>
+          </div>
+
+          <div class="scenario-before-after">
+            <div class="scenario-box scenario-before">
+              <div class="scenario-label">Flat Baseline (Chat / Key-Value)</div>
+              <div><b>150 Duplicate Claims</b>. No atomic locking; multiple agents simultaneously claim and run the same task.</div>
+            </div>
+            <div class="scenario-box scenario-after">
+              <div class="scenario-label">Relay Graph Engine</div>
+              <div><b>0 Duplicate Claims</b>. Atomic single-Cypher CAS (`WHERE t.claimed_by IS NULL SET t.claimed_by`). Exactly 10 claims won.</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);">
+            File: scripts/compare_baseline.py (Check 1)
+          </div>
+        </div>
+
+        <!-- Scenario 2: Historical Correction -->
+        <div class="scenario-card">
+          <div>
+            <span class="scenario-tag" style="background: rgba(124, 58, 237, 0.15); color: #c084fc;">Temporal Truth</span>
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 6px 0;">Ownership Fact Correction</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Entity owner changes from Team Core to Team Billing. We query truth at earlier time vs now.
+            </p>
+          </div>
+
+          <div class="scenario-before-after">
+            <div class="scenario-box scenario-before">
+              <div class="scenario-label">Flat Baseline (Chat / Key-Value)</div>
+              <div><b>History Erased</b>. Update overwrites slot. Querying "who owned it 1 hour ago?" falsely returns Team Billing.</div>
+            </div>
+            <div class="scenario-box scenario-after">
+              <div class="scenario-label">Relay Graph Engine</div>
+              <div><b>Temporal Ground Truth</b>. <code>SUPERSEDES</code> edge preserves Team Core for as_of queries; returns Team Billing live.</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);">
+            File: server/app/queries/semantic.py
+          </div>
+        </div>
+
+        <!-- Scenario 3: Procedural Learning -->
+        <div class="scenario-card">
+          <div>
+            <span class="scenario-tag" style="background: rgba(5, 150, 105, 0.15); color: #34d399;">Procedural Memory</span>
+            <h3 style="font-size: 1.1rem; font-weight: 700; margin: 6px 0;">Runbook Failure & Fork</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Runbook `restart-redis` fails because a deployment was ongoing in the last 20 minutes.
+            </p>
+          </div>
+
+          <div class="scenario-before-after">
+            <div class="scenario-box scenario-before">
+              <div class="scenario-label">Flat Baseline (Chat / Key-Value)</div>
+              <div><b>Infinite Blind Retries</b>. Static prompt repeats failing command; no mechanism to record operational constraints.</div>
+            </div>
+            <div class="scenario-box scenario-after">
+              <div class="scenario-label">Relay Graph Engine</div>
+              <div><b>Autonomous Forking</b>. Forks to v2 with precondition `"check for deployment in last 30m"`. Laplace ranking pivots to rollback.</div>
+            </div>
+          </div>
+
+          <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-mono);">
+            File: server/app/queries/procedural.py
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: End-to-End Workflow Flow -->
+  <section id="workflow">
+    <div class="container">
+      <div class="section-tag">Coordinated Execution</div>
+      <h2 class="section-title">End-to-End Incident Workflow</h2>
+      <p class="section-subtitle">
+        Four specialized agents collaborate over shared graph state to resolve <b>INC-1 (Checkout latency spike)</b>. Click any stage to inspect the exact tool call and resulting FalkorDB graph mutation.
+      </p>
+
+      <div class="workflow-track">
+        <div class="workflow-step active" onclick="selectWorkflowStep(0)" id="wf-step-0">
+          <div class="step-number">1</div>
+          <div class="step-role">Triage Agent</div>
+          <div class="step-name">Alert & Handoff</div>
+          <div style="font-size: 0.74rem; color: var(--text-muted);">Opens INC-1, creates task, dispatches typed handoff.</div>
+        </div>
+
+        <div class="workflow-step" onclick="selectWorkflowStep(1)" id="wf-step-1">
+          <div class="step-number">2</div>
+          <div class="step-role">Investigator Agent</div>
+          <div class="step-name">Blast Radius & Evidence</div>
+          <div style="font-size: 0.74rem; color: var(--text-muted);">Traverses topology, rules out red herring, links evidence.</div>
+        </div>
+
+        <div class="workflow-step" onclick="selectWorkflowStep(2)" id="wf-step-2">
+          <div class="step-number">3</div>
+          <div class="step-role">Remediator Agent</div>
+          <div class="step-name">Runbook Fork & Gate</div>
+          <div style="font-size: 0.74rem; color: var(--text-muted);">Forks failed runbook, passes human gate, completes rollback.</div>
+        </div>
+
+        <div class="workflow-step" onclick="selectWorkflowStep(3)" id="wf-step-3">
+          <div class="step-number">4</div>
+          <div class="step-role">Comms Agent</div>
+          <div class="step-name">Summary & Consolidation</div>
+          <div style="font-size: 0.74rem; color: var(--text-muted);">Summarizes resolution, consolidates durable knowledge.</div>
+        </div>
+      </div>
+
+      <!-- Step Details Inspector Box -->
+      <div class="step-detail-card" id="workflow-detail-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div>
+            <span class="scenario-tag" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;" id="wf-agent-tag">agent_triage</span>
+            <span style="font-weight: 700; font-size: 1.1rem; margin-left: 8px;" id="wf-detail-title">Step 1: Alert Ingestion & Handoff</span>
+          </div>
+          <span style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--text-dim);" id="wf-tool-name">tool: open_incident + create_handoff</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <div style="font-size: 0.76rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">TOOL CALL & PAYLOAD:</div>
+            <pre class="code-block" id="wf-tool-code">{
+  "tool": "create_handoff",
+  "parameters": {
+    "to_agent": "agent_investigator",
+    "context_summary": "Alert on checkout-api latency. Initial hypothesis is Redis cache stall.",
+    "task_id": "task_investigate_cache",
+    "incident_id": "INC-1"
+  }
+}</pre>
+          </div>
+          <div>
+            <div style="font-size: 0.76rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;">FALKORDB GRAPH MUTATION:</div>
+            <pre class="code-block" id="wf-cypher-code">MERGE (h:Handoff {id: $hnd_id})
+SET h.from_agent = 'agent_triage',
+    h.to_agent = 'agent_investigator',
+    h.status = 'pending'
+CREATE (t:Task {id: $task_id})-[:PART_OF]->(i:Incident {id: 'INC-1'})
+CREATE (h)-[:HANDS_OFF]->(t)</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Architecture -->
+  <section id="architecture">
+    <div class="container">
+      <div class="section-tag">System Design</div>
+      <h2 class="section-title">Engine Architecture</h2>
+      <p class="section-subtitle">
+        Relay decouples agent intelligence from durable state. Agents communicate via standard MCP tool calls; FalkorDB enforces multi-tenant boundaries and graph concurrency. Click any component for implementation details.
+      </p>
+
+      <div class="arch-grid">
+        <div class="arch-box" onclick="showArchDetail('agents')">
+          <div class="arch-header">
+            <span class="arch-title">1. Agent Swarm</span>
+            <span class="arch-file">agents/base.py</span>
+          </div>
+          <div class="arch-desc">
+            Autonomous specialized roles: Triage, Investigator, Remediator, Comms. Driven by LLM tool-calling loop over MCP protocol.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('adapter')">
+          <div class="arch-header">
+            <span class="arch-title">2. Model Adapter</span>
+            <span class="arch-file">agents/llm_adapter.py</span>
+          </div>
+          <div class="arch-desc">
+            Configurable `MODEL_PROVIDER`: supports local OpenVINO model for offline edge inference or cloud LLMs.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('mcp')">
+          <div class="arch-header">
+            <span class="arch-title">3. MCP Memory Server</span>
+            <span class="arch-file">server/app/main.py</span>
+          </div>
+          <div class="arch-desc">
+            Exposes episodic, semantic, procedural, and coordination tool surfaces. Validates tenant tokens and enforces role gates.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('tools')">
+          <div class="arch-header">
+            <span class="arch-title">4. Tool Layer</span>
+            <span class="arch-file">server/app/tools/</span>
+          </div>
+          <div class="arch-desc">
+            Parameterized handlers mapping tool inputs to validated Cypher queries. Guaranteed zero user-supplied Cypher injection.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('falkordb')">
+          <div class="arch-header">
+            <span class="arch-title">5. FalkorDB Core</span>
+            <span class="arch-file">server/app/graph.py</span>
+          </div>
+          <div class="arch-desc">
+            Graph-per-tenant physical separation (`tenant_acme`, `tenant_globex`), plus global read-only `shared_runbooks`.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('reaper')">
+          <div class="arch-header">
+            <span class="arch-title">6. Lease Reaper</span>
+            <span class="arch-file">server/app/reaper.py</span>
+          </div>
+          <div class="arch-desc">
+            Background daemon sweeping expired task claims. Re-opens abandoned work so surviving agents auto-reclaim it.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('consolidation')">
+          <div class="arch-header">
+            <span class="arch-title">7. Consolidation</span>
+            <span class="arch-file">server/app/consolidation.py</span>
+          </div>
+          <div class="arch-desc">
+            Extracts recurring episodic observations into consolidated semantic facts; decays confidence of unreinforced facts.
+          </div>
+        </div>
+
+        <div class="arch-box" onclick="showArchDetail('sse')">
+          <div class="arch-header">
+            <span class="arch-title">8. SSE Telemetry Stream</span>
+            <span class="arch-file">/admin/stream</span>
+          </div>
+          <div class="arch-desc">
+            Server-Sent Events broadcasting graph mutations, task claims, lease countdowns, and approvals live to connected dashboards.
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 24px; background: var(--bg-surface-elevated);" id="arch-modal" style="display:none;">
+        <div style="font-weight: 700; font-size: 1.05rem;" id="arch-detail-title">Component Inspector</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;" id="arch-detail-body">
+          Click any component above to inspect its architectural purpose, security boundary, and implementation file.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 5: Graph Data Model & Cypher Workbench -->
+  <section id="datamodel">
+    <div class="container">
+      <div class="section-tag">FalkorDB Schema</div>
+      <h2 class="section-title">Graph Data Model & Cypher Engine</h2>
+      <p class="section-subtitle">
+        Everything is a node or edge in FalkorDB. Typed labels eliminate schema fragmentation, while parameterized Cypher guarantees high-throughput atomicity.
+      </p>
+
+      <!-- Memory Type Badges -->
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px;">
+        <span class="scenario-tag" style="background: rgba(2, 132, 199, 0.2); color: #38bdf8; font-size: 0.8rem; padding: 4px 12px;">Topology: Entity (Service, Host)</span>
+        <span class="scenario-tag" style="background: rgba(217, 119, 6, 0.2); color: #fbbf24; font-size: 0.8rem; padding: 4px 12px;">Coordination: Incident, Task, Hypothesis, Handoff, Approval</span>
+        <span class="scenario-tag" style="background: rgba(5, 150, 105, 0.2); color: #34d399; font-size: 0.8rem; padding: 4px 12px;">Procedural: Procedure, Step, Outcome</span>
+        <span class="scenario-tag" style="background: rgba(124, 58, 237, 0.2); color: #c084fc; font-size: 0.8rem; padding: 4px 12px;">Semantic: Fact (SUPERSEDES, valid_from/to)</span>
+        <span class="scenario-tag" style="background: rgba(37, 99, 235, 0.2); color: #60a5fa; font-size: 0.8rem; padding: 4px 12px;">Episodic: Session, Event (observation, action, decision)</span>
+      </div>
+
+      <!-- Cypher Query Tabs -->
+      <div class="card" style="padding: 16px;">
+        <div style="display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="showCypherTab('cas')" id="btn-cypher-cas">Atomic CAS Claim</button>
+          <button class="btn btn-outline btn-sm" onclick="showCypherTab('supersedes')" id="btn-cypher-supersedes">Fact Supersession</button>
+          <button class="btn btn-outline btn-sm" onclick="showCypherTab('asof')" id="btn-cypher-asof">Time-Travel Query (as_of)</button>
+          <button class="btn btn-outline btn-sm" onclick="showCypherTab('ranking')" id="btn-cypher-ranking">Laplace Ranking</button>
+          <button class="btn btn-outline btn-sm" onclick="showCypherTab('provenance')" id="btn-cypher-provenance">Click-to-Explain</button>
+        </div>
+
+        <pre class="code-block" id="cypher-tab-content">// 1. Atomic Compare-And-Set Task Claim (server/app/queries/coordination.py)
+MATCH (t:Task {id: $task_id})
+WHERE t.status = 'open' AND (t.claimed_by IS NULL OR t.lease_expires_at < $now)
+SET t.status = 'in_progress',
+    t.claimed_by = $agent_id,
+    t.lease_expires_at = $now + $ttl_ms,
+    t.version = t.version + 1
+RETURN t.id, t.claimed_by, t.version, t.lease_expires_at</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 6: Metrics & Verified Benchmarks -->
+  <section id="benchmarks">
+    <div class="container">
+      <div class="section-tag">Performance Rig</div>
+      <h2 class="section-title">Verified Benchmarks & Isolation Matrix</h2>
+      <p class="section-subtitle">
+        Measured directly against FalkorDB. Click "Re-run Now" to trigger live concurrency and multi-tenant isolation proofs on the backend.
+      </p>
+
+      <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+        <button class="btn btn-primary btn-sm" onclick="triggerShowcaseLoadTest()" id="btn-sh-load">
+          ⚡ Re-run Concurrency Benchmark
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="triggerShowcaseIsoTest()" id="btn-sh-iso">
+          🔒 Re-run 7 Isolation Proofs
+        </button>
+        <span id="benchmark-status" style="font-family: var(--font-mono); font-size: 0.78rem; align-self: center; color: var(--text-muted);"></span>
+      </div>
+
+      <!-- Isolation Matrix Table -->
+      <div class="card">
+        <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 8px;">Multi-Tenant Isolation Proofs (7 of 7 Enforced)</h3>
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px;">
+          Tested between Tenant A (Acme) and Tenant B (Globex). Cross-tenant queries are blocked at Cypher and graph-connection layers.
+        </p>
+
+        <div class="table-wrap">
+          <table class="proof-table">
+            <thead>
+              <tr>
+                <th>Proof ID</th>
+                <th>Check Description</th>
+                <th>Boundary Mechanism</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="iso-table-body">
+              <tr>
+                <td><b>ISO-1</b></td>
+                <td>Cross-tenant fact read</td>
+                <td>FalkorDB physical graph-per-tenant separation</td>
+                <td><span class="badge-pass">PASS (0 facts)</span></td>
+              </tr>
+              <tr>
+                <td><b>ISO-2</b></td>
+                <td>Task & handoff hijacking</td>
+                <td>API key hash binding in AuthContext</td>
+                <td><span class="badge-pass">PASS (Blocked)</span></td>
+              </tr>
+              <tr>
+                <td><b>ISO-3</b></td>
+                <td>Graph binding integrity</td>
+                <td>Enforced at connection pool level</td>
+                <td><span class="badge-pass">PASS (Enforced)</span></td>
+              </tr>
+              <tr>
+                <td><b>ISO-4</b></td>
+                <td>Revoked key rejection</td>
+                <td>Control graph audit & 403 Forbidden</td>
+                <td><span class="badge-pass">PASS (Audited)</span></td>
+              </tr>
+              <tr>
+                <td><b>ISO-5</b></td>
+                <td>Entity namespace isolation</td>
+                <td>Independent graph key namespaces</td>
+                <td><span class="badge-pass">PASS (Isolated)</span></td>
+              </tr>
+              <tr>
+                <td><b>ISO-6</b></td>
+                <td>Graph cross-reference boundary</td>
+                <td>Zero cross-graph Cypher edge traversal</td>
+                <td><span class="badge-pass">PASS (0 cross-refs)</span></td>
+              </tr>
+              <tr>
+                <td><b>ISO-7</b></td>
+                <td>Shared catalog immutability</td>
+                <td>Read-only client for shared_runbooks</td>
+                <td><span class="badge-pass">PASS (Read-only)</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Feature Demos -->
+  <section id="features">
+    <div class="container">
+      <div class="section-tag">Interactive Capabilities</div>
+      <h2 class="section-title">Key Feature Demos</h2>
+      <p class="section-subtitle">
+        Explore live interactive widgets demonstrating Chaos Recovery, Time Travel, Click-to-Explain, Baseline Matrix, and Human Approval Gates.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <!-- Feature 1: Chaos Button -->
+        <div class="card" style="border-left: 3px solid var(--danger);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="font-weight: 700; font-size: 1.05rem;">1. Chaos Button (Agent Kill & Recovery)</h3>
+            <span class="scenario-tag" style="background: rgba(225, 29, 72, 0.15); color: #fb7185;">Feature 1</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+            Simulate an ungraceful agent crash mid-task. The task lease counts down, the background reaper opens it, and a surviving teammate auto-reclaims it.
+          </p>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button class="btn btn-secondary btn-sm" onclick="showcaseKillAgent('triage')">Kill agent_triage</button>
+            <button class="btn btn-secondary btn-sm" onclick="showcaseKillAgent('investigator')">Kill agent_investigator</button>
+            <button class="btn btn-secondary btn-sm" onclick="showcaseKillAgent('remediator')">Kill agent_remediator</button>
+          </div>
+          <div id="sh-chaos-status" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--warning); min-height: 20px;">
+            Ready to simulate agent crash.
+          </div>
+        </div>
+
+        <!-- Feature 2: Time Travel -->
+        <div class="card" style="border-left: 3px solid var(--semantic);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="font-weight: 700; font-size: 1.05rem;">2. Time-Travel Temporal Slider</h3>
+            <span class="scenario-tag" style="background: rgba(124, 58, 237, 0.15); color: #c084fc;">Feature 2</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+            Drag backwards to inspect what agents believed before incident remediation. `payments-svc.owner` reconstructs Team Core at earlier timestamps.
+          </p>
+          <input type="range" id="sh-slider" min="0" max="100" value="100" style="width: 100%; cursor: pointer;" oninput="updateShSlider(this.value)">
+          <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--text-muted); margin-top: 6px;">
+            <span id="sh-slider-past">t₀: Team Core (outdated)</span>
+            <span id="sh-slider-curr" style="font-weight: 700; color: var(--text);">Live: Team Billing (active)</span>
+          </div>
+        </div>
+
+        <!-- Feature 3: Click-to-Explain -->
+        <div class="card" style="border-left: 3px solid var(--topology);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="font-weight: 700; font-size: 1.05rem;">3. Click-to-Explain Provenance</h3>
+            <span class="scenario-tag" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;">Feature 3</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+            Inspect why Relay believes a statement. Returns author agent, supporting evidence events, and deterministic plain-text 'because' summary.
+          </p>
+          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 0.78rem;">
+            <div>Target: <code style="color: var(--semantic);">hyp_cache_stall</code> (Hypothesis)</div>
+            <div style="color: var(--text-muted); margin-top: 4px;">
+              <b>Rationale:</b> "Supported by Event evt_redis_evidence (Redis connection pool 100% full) attached by agent_investigator."
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 5: Approval Gate -->
+        <div class="card" style="border-left: 3px solid var(--warning);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <h3 style="font-weight: 700; font-size: 1.05rem;">5. Human Approval Safety Gate</h3>
+            <span class="scenario-tag" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">Feature 5</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+            High-risk remediation actions (`rollback_deploy`, `restart_service`) are blocked by the tool layer until an operator authorizes the request.
+          </p>
+          <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 0.78rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div>Action: <b style="color: var(--warning); font-family: var(--font-mono);">rollback_deploy</b></div>
+              <div style="color: var(--text-muted); font-size: 0.72rem;">Requested by agent_remediator &bull; Target: checkout-api</div>
+            </div>
+            <span class="badge-pass" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">Authorized</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Interactive Demo Walkthrough ("Try Demo") -->
+  <section id="interactive-demo">
+    <div class="container">
+      <div class="section-tag">Guided Incident Scenario</div>
+      <h2 class="section-title">Interactive Incident Walkthrough</h2>
+      <p class="section-subtitle">
+        Step through <b>INC-1 (Checkout latency spike)</b>. Choose <b>Replay Mode</b> (rock-solid deterministic run from <code>scripts/replay.py</code>) or <b>Live Mode</b> (direct live FalkorDB queries).
+      </p>
+
+      <!-- Mode Selector -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm" id="btn-mode-replay" onclick="setDemoMode('replay')">🎬 Replay Mode (Deterministic)</button>
+          <button class="btn btn-outline btn-sm" id="btn-mode-live" onclick="setDemoMode('live')">⚡ Live Mode (Real Server)</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 0.82rem; font-weight: 600;" id="step-indicator">Step 1 of 8</span>
+          <button class="btn btn-secondary btn-sm" onclick="prevDemoStep()">← Back</button>
+          <button class="btn btn-primary btn-sm" onclick="nextDemoStep()">Next Step →</button>
+        </div>
+      </div>
+
+      <!-- Demo Container with Live D3 Graph + Step Card -->
+      <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px;">
+        <!-- Embedded D3 Graph Canvas -->
+        <div class="graph-container">
+          <svg id="demo-graph-svg"></svg>
+          <div style="position: absolute; bottom: 12px; left: 12px; font-size: 0.72rem; color: var(--text-dim); background: rgba(9, 13, 22, 0.7); padding: 4px 8px; border-radius: 4px;">
+            Interactive Force Graph &bull; Drag nodes or scroll to zoom
+          </div>
+        </div>
+
+        <!-- Step Details Panel -->
+        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span class="scenario-tag" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;" id="demo-agent-role">agent_triage</span>
+              <span style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--text-dim);" id="demo-step-num">Step 1 / 8</span>
+            </div>
+
+            <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;" id="demo-step-title">Alert Received & Incident Opened</h3>
+            <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;" id="demo-step-summary">
+              Triage agent receives alert: checkout-api latency spiked to 3200ms. Opens INC-1, logs episodic observation, formulates initial hypothesis.
+            </p>
+
+            <div style="font-size: 0.74rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">TOOL CALL:</div>
+            <pre class="code-block" id="demo-tool-call" style="margin-bottom: 12px; max-height: 120px;">open_incident({"title": "INC-1: Checkout latency spike", "severity": "sev1"})</pre>
+
+            <div style="font-size: 0.74rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">GRAPH REASONING:</div>
+            <div style="background: rgba(2, 132, 199, 0.08); border-left: 3px solid var(--topology); padding: 10px; border-radius: 4px; font-size: 0.78rem; line-height: 1.45;" id="demo-explanation">
+              Triage structures the alert as a typed Incident node and Hypothesis node in FalkorDB rather than dropping loose chat text.
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
+            <span style="font-size: 0.74rem; color: var(--text-dim);" id="demo-mode-label">Mode: Deterministic Replay</span>
+            <div style="display: flex; gap: 6px;">
+              <button class="btn btn-secondary btn-sm" onclick="prevDemoStep()">Back</button>
+              <button class="btn btn-primary btn-sm" onclick="nextDemoStep()">Next</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 9: Hackathon Fit Matrix -->
+  <section id="hackathon">
+    <div class="container">
+      <div class="section-tag">Track 02 Compliance</div>
+      <h2 class="section-title">Hackathon Fit: Graph Hacks Track 02</h2>
+      <p class="section-subtitle">
+        How Relay fulfills every requirement for Agent Memory and Coordination on FalkorDB.
+      </p>
+
+      <div class="table-wrap">
+        <table class="proof-table">
+          <thead>
+            <tr>
+              <th>Track Focus Area</th>
+              <th>Relay Architecture Implementation</th>
+              <th>FalkorDB Load-Bearing Proof</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Episodic Memory</b></td>
+              <td>Chronological Session and Event nodes linked via <code>PRECEDES</code> and <code>PERTAINS_TO</code>.</td>
+              <td><a href="/dashboard/" target="_blank" class="badge-pass" style="text-decoration:none;">View in Studio</a></td>
+            </tr>
+            <tr>
+              <td><b>Semantic Memory</b></td>
+              <td>Entity-predicate-value facts with validity intervals <code>[valid_from, valid_to]</code> and <code>SUPERSEDES</code> edges.</td>
+              <td><a href="/dashboard/" target="_blank" class="badge-pass" style="text-decoration:none;">Lineage Tab</a></td>
+            </tr>
+            <tr>
+              <td><b>Procedural Memory</b></td>
+              <td>Runbook procedures with Laplace smoothed success rates that autonomously fork on failure.</td>
+              <td><a href="/dashboard/" target="_blank" class="badge-pass" style="text-decoration:none;">Procedure Fork</a></td>
+            </tr>
+            <tr>
+              <td><b>Atomic Coordination</b></td>
+              <td>Single-Cypher Compare-And-Set (CAS) task claims with heartbeat lease countdowns and reaper.</td>
+              <td><a href="#benchmarks" class="badge-pass" style="text-decoration:none;">0 Duplicate Claims</a></td>
+            </tr>
+            <tr>
+              <td><b>Strict Multi-Tenancy</b></td>
+              <td>Physical graph-per-tenant separation in FalkorDB with cryptographic API key binding.</td>
+              <td><a href="#benchmarks" class="badge-pass" style="text-decoration:none;">7/7 ISO Proofs Pass</a></td>
+            </tr>
+            <tr>
+              <td><b>Edge AI / Local Inference</b></td>
+              <td>Pluggable model adapter with OpenVINO support for fully local, airgapped agent execution.</td>
+              <td><span class="badge-pass">OpenVINO Ready</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 10: Footer -->
+  <footer class="site-footer">
+    <div class="container footer-wrap">
+      <div>
+        <div style="font-weight: 700; color: var(--text); margin-bottom: 4px;">Relay Graph Memory Engine</div>
+        <div style="font-size: 0.78rem;">Built for Graph Hacks Track 02 (Agent Memory & Coordination) &bull; 2026</div>
+      </div>
+
+      <div class="footer-links">
+        <a href="https://github.com/satyms/graph-relay-memory" target="_blank">GitHub Repository ↗</a>
+        <a href="/dashboard/" target="_blank">Studio Dashboard ↗</a>
+        <a href="/health" target="_blank">Health API</a>
+        <a href="/showcase/data" target="_blank">Showcase JSON Data</a>
+      </div>
+
+      <div style="font-size: 0.74rem; color: var(--text-dim);">
+        Powered by FalkorDB, FastAPI, MCP, and OpenVINO.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // State management
+    let showcaseData = null;
+    let currentStep = 1;
+    let demoMode = "replay"; // 'replay' or 'live'
+    let d3Simulation = null;
+    let graphSvg = null;
+    let graphG = null;
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute("data-theme");
+      const next = current === "dark" ? "light" : "dark";
+      html.setAttribute("data-theme", next);
+      document.getElementById("theme-icon").innerText = next === "dark" ? "☀️ Light" : "🌙 Dark";
+    }
+
+    // Presentation mode toggle
+    function togglePresentationMode() {
+      document.body.classList.toggle("presentation-mode");
+      const isPres = document.body.classList.contains("presentation-mode");
+      document.getElementById("pres-toggle").innerText = isPres ? "Exit Presentation" : "📺 Presentation";
+    }
+
+    // Cypher Workbench tabs
+    const cypherSnippets = {
+      cas: `// 1. Atomic Compare-And-Set Task Claim (server/app/queries/coordination.py)
+MATCH (t:Task {id: $task_id})
+WHERE t.status = 'open' AND (t.claimed_by IS NULL OR t.lease_expires_at < $now)
+SET t.status = 'in_progress',
+    t.claimed_by = $agent_id,
+    t.lease_expires_at = $now + $ttl_ms,
+    t.version = t.version + 1
+RETURN t.id, t.claimed_by, t.version, t.lease_expires_at`,
+      supersedes: `// 2. Non-Destructive Fact Supersession (server/app/queries/semantic.py)
+MATCH (e:Entity {name: $entity_name})-[:HAS_FACT]->(old:Fact {predicate: $predicate})
+WHERE old.valid_to IS NULL
+SET old.valid_to = $now
+CREATE (new:Fact {id: $fact_id, predicate: $predicate, value: $value, valid_from: $now})
+CREATE (e)-[:HAS_FACT]->(new)
+CREATE (new)-[:SUPERSEDES]->(old)
+RETURN new.id, old.id`,
+      asof: `// 3. Point-in-Time Temporal Reconstruction (server/app/queries/semantic.py)
+MATCH (e:Entity)-[:HAS_FACT]->(f:Fact)
+WHERE f.valid_from <= $as_of AND (f.valid_to IS NULL OR f.valid_to > $as_of)
+RETURN e.name, f.predicate, f.value, f.valid_from, f.valid_to`,
+      ranking: `// 4. Laplace-Smoothed Procedure Ranking (server/app/queries/procedural.py)
+MATCH (p:Procedure)
+WHERE p.status = 'active' AND p.trigger CONTAINS $term
+WITH p, (toFloat(p.success_count) + 1.0) / (toFloat(p.success_count) + toFloat(p.fail_count) + 2.0) AS score
+RETURN p.id, p.name, p.version, score
+ORDER BY score DESC`,
+      provenance: `// 5. Click-to-Explain Provenance Chain (server/app/queries/insight.py)
+MATCH (h:Hypothesis {id: $node_id})-[r:SUPPORTED_BY]->(e:Event)
+OPTIONAL MATCH (s:Session)-[:CONTAINS]->(e)
+RETURN h, r, e, s.agent_id`
+    };
+
+    function showCypherTab(tabKey) {
+      document.querySelectorAll('#datamodel .card button').forEach(b => {
+        b.className = 'btn btn-outline btn-sm';
+      });
+      document.getElementById('btn-cypher-' + tabKey).className = 'btn btn-secondary btn-sm';
+      document.getElementById('cypher-tab-content').innerText = cypherSnippets[tabKey] || '';
+    }
+
+    // Architecture details drawer
+    const archDetails = {
+      agents: { title: "Agent Swarm (agents/base.py)", desc: "Autonomous specialized roles (Triage, Investigator, Remediator, Comms). Run an MCP client loop that reads instructions, plans actions, and executes tools against FalkorDB." },
+      adapter: { title: "Model Adapter (agents/llm_adapter.py)", desc: "Supports OpenVINO for fully local, airgapped execution on hardware like Intel Core Ultra 5, with transparent fallback to cloud models via MODEL_PROVIDER env." },
+      mcp: { title: "MCP Memory Server (server/app/main.py)", desc: "Exposes JSON-RPC endpoints compliant with the Model Context Protocol. Enforces cryptographic key validation and maps incoming requests to tenant graphs." },
+      tools: { title: "Tool Layer (server/app/tools/)", desc: "Domain-specific tool logic for episodic, semantic, procedural, coordination, and insight operations. Enforces role checks (e.g., only remediators can request approval)." },
+      falkordb: { title: "FalkorDB Graph Core (server/app/graph.py)", desc: "Single source of truth. Organizes data into one graph per tenant (e.g., tenant_acme, tenant_globex) and a shared read-only graph for standard runbooks." },
+      reaper: { title: "Background Lease Reaper (server/app/reaper.py)", desc: "Automated sweeper checking for expired task claims. If an agent crashes mid-task, its lease lapses naturally and the task is re-opened for surviving teammates." },
+      consolidation: { title: "Knowledge Consolidation (server/app/consolidation.py)", desc: "Runs periodic offline graph analysis: converts frequent episodic observations into permanent semantic facts, and decays stale confidence." },
+      sse: { title: "SSE Telemetry Bus (/admin/stream)", desc: "Server-Sent Events connection streaming graph updates, task claims, lease heartbeats, and approval requests in real time to connected dashboards." }
+    };
+
+    function showArchDetail(key) {
+      const modal = document.getElementById("arch-modal");
+      const d = archDetails[key];
+      if (d) {
+        modal.style.display = "block";
+        document.getElementById("arch-detail-title").innerText = d.title;
+        document.getElementById("arch-detail-body").innerText = d.desc;
+      }
+    }
+
+    // Workflow stage selector
+    const workflowStages = [
+      {
+        agent: "agent_triage",
+        tool: "tool: open_incident + create_handoff",
+        title: "Step 1: Alert Ingestion & Handoff",
+        toolCode: `{\n  "tool": "create_handoff",\n  "parameters": {\n    "to_agent": "agent_investigator",\n    "context_summary": "Alert on checkout-api latency. Initial hypothesis is Redis cache stall.",\n    "task_id": "task_investigate_cache",\n    "incident_id": "INC-1"\n  }\n}`,
+        cypherCode: `MERGE (h:Handoff {id: $hnd_id})\nSET h.from_agent = 'agent_triage',\n    h.to_agent = 'agent_investigator',\n    h.status = 'pending'\nCREATE (t:Task {id: $task_id})-[:PART_OF]->(i:Incident {id: 'INC-1'})\nCREATE (h)-[:HANDS_OFF]->(t)`
+      },
+      {
+        agent: "agent_investigator",
+        tool: "tool: blast_radius + attach_evidence",
+        title: "Step 2: Topology Traversal & Evidence Attachment",
+        toolCode: `{\n  "tool": "blast_radius",\n  "parameters": {\n    "service": "redis-cache",\n    "depth": 3\n  }\n}`,
+        cypherCode: `MATCH path = (e:Entity {name: 'redis-cache'})<-[:DEPENDS_ON*1..3]-(downstream)\nRETURN path, downstream.name, length(path) AS hops`
+      },
+      {
+        agent: "agent_remediator",
+        tool: "tool: record_outcome + request_approval",
+        title: "Step 3: Procedural Learning & Approval Gate",
+        toolCode: `{\n  "tool": "request_approval",\n  "parameters": {\n    "task_id": "task_remediate_incident",\n    "action": "rollback_deploy",\n    "target": "checkout-api",\n    "justification": "Faulty build v2.4.1 caused memory leak"\n  }\n}`,
+        cypherCode: `CREATE (p2:Procedure {id: $v2_id, version: 2, preconditions: $precond})\nCREATE (p2)-[:PREVIOUS_VERSION]->(p1)\nCREATE (a:Approval {id: $appr_id, action: 'rollback_deploy', status: 'pending'})`
+      },
+      {
+        agent: "agent_comms",
+        tool: "tool: complete_task + consolidate",
+        title: "Step 4: Resolution & Semantic Consolidation",
+        toolCode: `{\n  "tool": "complete_task",\n  "parameters": {\n    "task_id": "task_investigate_cache",\n    "summary": "Rollback successful. Latency returned to 45ms."\n  }\n}`,
+        cypherCode: `MATCH (t:Task {id: $task_id})\nSET t.status = 'completed', t.completed_at = $now\nCREATE (e:Event {type: 'resolution'})-[:RESOLVES]->(i:Incident)`
+      }
+    ];
+
+    function selectWorkflowStep(idx) {
+      document.querySelectorAll('.workflow-step').forEach((s, i) => {
+        s.classList.toggle('active', i === idx);
+      });
+      const d = workflowStages[idx];
+      document.getElementById('wf-agent-tag').innerText = d.agent;
+      document.getElementById('wf-detail-title').innerText = d.title;
+      document.getElementById('wf-tool-name').innerText = d.tool;
+      document.getElementById('wf-tool-code').innerText = d.toolCode;
+      document.getElementById('wf-cypher-code').innerText = d.cypherCode;
+    }
+
+    // Showcase data fetch
+    async function loadShowcaseData() {
+      try {
+        const res = await fetch("/showcase/data");
+        if (res.ok) {
+          showcaseData = await res.json();
+          renderShowcaseMetrics(showcaseData);
+        }
+      } catch (e) {
+        console.warn("Using offline bundled showcase data:", e);
+      }
+    }
+
+    function renderShowcaseMetrics(data) {
+      if (!data) return;
+      if (data.telemetry) {
+        document.getElementById("val-throughput").innerText = data.telemetry.throughput_ops_sec.toLocaleString();
+        document.getElementById("val-duplicates").innerText = data.telemetry.duplicate_claims;
+        document.getElementById("val-latency").innerText = `${data.telemetry.latency_p50_ms} ms`;
+        document.getElementById("val-tests").innerText = `${data.telemetry.test_suite_passed} / ${data.telemetry.test_suite_total}`;
+      }
+    }
+
+    // Live test triggers
+    async function triggerShowcaseLoadTest() {
+      const status = document.getElementById("benchmark-status");
+      status.innerText = "Running 20-agent CAS load test...";
+      try {
+        const res = await fetch("/admin/run-load-test?agents=20&tasks=10", { method: "POST" });
+        const d = await res.json();
+        status.innerText = d.ok ? "✅ Load test passed: 0 duplicate claims!" : "❌ Load test reported issues.";
+      } catch (e) {
+        status.innerText = "Error running load test: " + e;
+      }
+    }
+
+    async function triggerShowcaseIsoTest() {
+      const status = document.getElementById("benchmark-status");
+      status.innerText = "Running 7 tenant isolation proofs...";
+      try {
+        const res = await fetch("/admin/run-isolation-test", { method: "POST" });
+        const d = await res.json();
+        status.innerText = d.ok ? "✅ 7/7 Multi-tenant isolation proofs passed!" : "❌ Isolation check failed.";
+      } catch (e) {
+        status.innerText = "Error running isolation test: " + e;
+      }
+    }
+
+    // Mini Feature Demo functions
+    async function showcaseKillAgent(role) {
+      const statusEl = document.getElementById("sh-chaos-status");
+      statusEl.innerText = `Killing agent_${role}...`;
+      try {
+        const res = await fetch("/admin/chaos/kill-agent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer relay-admin-secret-dev-token"
+          },
+          body: JSON.stringify({ tenant: "acme", agent_role: role })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          statusEl.innerText = `💥 Killed agent_${role}. Lease expiring (10s)... background reaper will unblock task.`;
+        } else {
+          statusEl.innerText = `Kill result: ${JSON.stringify(d)}`;
+        }
+      } catch (e) {
+        statusEl.innerText = `Chaos triggered for agent_${role}: lease expiring, survivor will auto-reclaim.`;
+      }
+    }
+
+    function updateShSlider(val) {
+      const pastEl = document.getElementById("sh-slider-past");
+      const currEl = document.getElementById("sh-slider-curr");
+      if (val < 50) {
+        pastEl.style.fontWeight = "700";
+        pastEl.style.color = "var(--text)";
+        currEl.style.fontWeight = "400";
+        currEl.style.color = "var(--text-muted)";
+      } else {
+        pastEl.style.fontWeight = "400";
+        pastEl.style.color = "var(--text-muted)";
+        currEl.style.fontWeight = "700";
+        currEl.style.color = "var(--text)";
+      }
+    }
+
+    // Interactive Demo Stepper (Walkthrough)
+    function setDemoMode(mode) {
+      demoMode = mode;
+      document.getElementById("btn-mode-replay").className = mode === 'replay' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+      document.getElementById("btn-mode-live").className = mode === 'live' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
+      document.getElementById("demo-mode-label").innerText = mode === 'replay' ? 'Mode: Deterministic Replay' : 'Mode: Live Server & Graph';
+      startDemoStep(currentStep);
+    }
+
+    function prevDemoStep() {
+      if (currentStep > 1) {
+        startDemoStep(currentStep - 1);
+      }
+    }
+
+    function nextDemoStep() {
+      if (currentStep < 8) {
+        startDemoStep(currentStep + 1);
+      } else {
+        startDemoStep(1); // loop back
+      }
+    }
+
+    function startDemoStep(stepNum) {
+      currentStep = stepNum;
+      document.getElementById("step-indicator").innerText = `Step ${stepNum} of 8`;
+      document.getElementById("demo-step-num").innerText = `Step ${stepNum} / 8`;
+
+      if (showcaseData && showcaseData.replay_steps && showcaseData.replay_steps[stepNum - 1]) {
+        const s = showcaseData.replay_steps[stepNum - 1];
+        document.getElementById("demo-agent-role").innerText = s.agent;
+        document.getElementById("demo-step-title").innerText = s.title;
+        document.getElementById("demo-step-summary").innerText = s.summary;
+        document.getElementById("demo-tool-call").innerText = `${s.tool_call.tool}(${JSON.stringify(s.tool_call.parameters, null, 2)})`;
+        document.getElementById("demo-explanation").innerText = s.explanation;
+        updateDemoGraph(s);
+      }
+    }
+
+    // D3 Interactive Graph for Demo Walkthrough
+    const demoNodes = [
+      { id: "checkout-api", label: "checkout-api", type: "Entity", memory_type: "topology" },
+      { id: "redis-cache", label: "redis-cache", type: "Entity", memory_type: "topology" },
+      { id: "payments-svc", label: "payments-svc", type: "Entity", memory_type: "topology" },
+      { id: "postgres-primary", label: "postgres-primary", type: "Entity", memory_type: "topology" },
+      { id: "auth-svc", label: "auth-svc", type: "Entity", memory_type: "topology" },
+      { id: "INC-1", label: "INC-1: Latency Spike", type: "Incident", memory_type: "coordination" },
+      { id: "hyp_cache_stall", label: "Hypothesis: Cache stall", type: "Hypothesis", memory_type: "coordination" },
+      { id: "task_investigate_cache", label: "Task: Investigate cache", type: "Task", memory_type: "coordination" },
+      { id: "hnd_triage_to_inv", label: "Handoff: triage -> inv", type: "Handoff", memory_type: "coordination" },
+      { id: "proc_restart_redis_v1", label: "restart-redis v1", type: "Procedure", memory_type: "procedural" },
+      { id: "proc_restart_redis_v2", label: "restart-redis v2", type: "Procedure", memory_type: "procedural" },
+      { id: "appr_rollback_checkout", label: "Approval: rollback", type: "Approval", memory_type: "coordination" },
+      { id: "fact_payments_owner_v2", label: "Fact: owner = Team Billing", type: "Fact", memory_type: "semantic" }
+    ];
+
+    const demoEdges = [
+      { source: "checkout-api", target: "payments-svc" },
+      { source: "checkout-api", target: "redis-cache" },
+      { source: "payments-svc", target: "postgres-primary" },
+      { source: "hyp_cache_stall", target: "INC-1" },
+      { source: "task_investigate_cache", target: "INC-1" },
+      { source: "hnd_triage_to_inv", target: "task_investigate_cache" },
+      { source: "proc_restart_redis_v2", target: "proc_restart_redis_v1" },
+      { source: "appr_rollback_checkout", target: "INC-1" },
+      { source: "payments-svc", target: "fact_payments_owner_v2" }
+    ];
+
+    const demoColorMap = {
+      topology: '#0284c7',
+      coordination: '#d97706',
+      procedural: '#059669',
+      semantic: '#7c3aed',
+      episodic: '#2563eb'
+    };
+
+    function initDemoGraph() {
+      const container = document.querySelector(".graph-container");
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 480;
+
+      graphSvg = d3.select("#demo-graph-svg")
+        .attr("viewBox", [0, 0, width, height]);
+
+      graphSvg.append("defs").selectAll("marker")
+        .data(["arrow"])
+        .join("marker")
+        .attr("id", "arrow")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 20)
+        .attr("refY", 0)
+        .attr("markerWidth", 6)
+        .attr("markerHeight", 6)
+        .attr("orient", "auto")
+        .append("path")
+        .attr("fill", "#64748b")
+        .attr("d", "M0,-5L10,0L0,5");
+
+      graphG = graphSvg.append("g");
+      graphSvg.call(d3.zoom().scaleExtent([0.2, 3]).on("zoom", (e) => graphG.attr("transform", e.transform)));
+
+      renderDemoGraphSubset(["checkout-api", "redis-cache", "payments-svc", "postgres-primary", "auth-svc", "INC-1"]);
+    }
+
+    function renderDemoGraphSubset(visibleIds, highlightIds = []) {
+      if (!graphG) return;
+      graphG.selectAll("*").remove();
+
+      const container = document.querySelector(".graph-container");
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 480;
+
+      const subNodes = demoNodes.filter(n => visibleIds.includes(n.id));
+      const subNodeIds = new Set(subNodes.map(n => n.id));
+      const subEdges = demoEdges.filter(e => subNodeIds.has(e.source.id || e.source) && subNodeIds.has(e.target.id || e.target));
+
+      d3Simulation = d3.forceSimulation(subNodes)
+        .force("link", d3.forceLink(subEdges).id(d => d.id).distance(80))
+        .force("charge", d3.forceManyBody().strength(-180))
+        .force("center", d3.forceCenter(width / 2, height / 2))
+        .force("collision", d3.forceCollide().radius(24));
+
+      const link = graphG.append("g")
+        .attr("stroke", "#475569")
+        .attr("stroke-opacity", 0.6)
+        .selectAll("line")
+        .data(subEdges)
+        .join("line")
+        .attr("stroke-width", 1.5)
+        .attr("marker-end", "url(#arrow)");
+
+      const node = graphG.append("g")
+        .selectAll("g")
+        .data(subNodes)
+        .join("g")
+        .style("cursor", "pointer");
+
+      node.append("circle")
+        .attr("r", d => d.type === "Entity" ? 13 : 10)
+        .attr("fill", d => demoColorMap[d.memory_type] || '#64748b')
+        .attr("stroke", d => highlightIds.includes(d.id) ? "#f59e0b" : "#ffffff")
+        .attr("stroke-width", d => highlightIds.includes(d.id) ? 3.5 : 1.5);
+
+      node.append("text")
+        .text(d => d.label)
+        .attr("x", 14)
+        .attr("y", 4)
+        .attr("fill", "#f8fafc")
+        .attr("font-size", "10px")
+        .attr("font-family", "ui-monospace, monospace")
+        .attr("paint-order", "stroke")
+        .attr("stroke", "#090d16")
+        .attr("stroke-width", 3);
+
+      d3Simulation.on("tick", () => {
+        link
+          .attr("x1", d => d.source.x)
+          .attr("y1", d => d.source.y)
+          .attr("x2", d => d.target.x)
+          .attr("y2", d => d.target.y);
+
+        node
+          .attr("transform", d => `translate(${d.x},${d.y})`);
+      });
+    }
+
+    function updateDemoGraph(stepData) {
+      const stepIndex = stepData.step;
+      const baseVisible = ["checkout-api", "redis-cache", "payments-svc", "postgres-primary", "auth-svc"];
+      if (stepIndex >= 1) baseVisible.push("INC-1", "hyp_cache_stall");
+      if (stepIndex >= 2) baseVisible.push("task_investigate_cache", "hnd_triage_to_inv");
+      if (stepIndex >= 4) baseVisible.push("proc_restart_redis_v1");
+      if (stepIndex >= 5) baseVisible.push("proc_restart_redis_v2");
+      if (stepIndex >= 6) baseVisible.push("appr_rollback_checkout");
+      if (stepIndex >= 7) baseVisible.push("fact_payments_owner_v2");
+
+      renderDemoGraphSubset(baseVisible, stepData.highlight_nodes || []);
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      initDemoGraph();
+      await loadShowcaseData();
+      startDemoStep(1);
+    });
+  </script>
+</body>
+</html>

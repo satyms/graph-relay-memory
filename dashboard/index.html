@@ -470,9 +470,9 @@
         <option value="acme" selected>Tenant: Acme (A)</option>
         <option value="globex">Tenant: Globex (B)</option>
       </select>
-      <button class="primary" onclick="triggerScenario()">Run incident scenario</button>
-      <button onclick="triggerLoadTest()">Concurrency test</button>
-      <button onclick="triggerIsolationTest()">Isolation test</button>
+      <button id="btn-run-scenario" class="primary" onclick="triggerScenario(this)">Run incident scenario</button>
+      <button id="btn-run-load-test" onclick="triggerLoadTest(this)">Concurrency test</button>
+      <button id="btn-run-isolation-test" onclick="triggerIsolationTest(this)">Isolation test</button>
       <div class="status-badge">
         <div class="status-dot"></div>
         <span id="sse-status">Live memory stream</span>
@@ -511,11 +511,11 @@
     <!-- Right Sidebar Inspector -->
     <div class="sidebar">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('feed')">Handoffs & Tasks</div>
+        <div class="tab active" onclick="switchTab('feed')" id="tab-btn-feed">Handoffs & Tasks</div>
         <div class="tab" onclick="switchTab('approvals')" id="tab-btn-approvals">Approvals <span id="pending-badge" style="display:none; background:#f43f5e; color:white; border-radius:8px; padding:1px 5px; font-size:0.65rem;">0</span></div>
-        <div class="tab" onclick="switchTab('lineage')">Fact Lineage</div>
+        <div class="tab" onclick="switchTab('lineage')" id="tab-btn-lineage">Fact Lineage</div>
         <div class="tab" onclick="switchTab('explain')" id="tab-btn-explain">Explain</div>
-        <div class="tab" onclick="switchTab('proofs')">Proofs & Metrics</div>
+        <div class="tab" onclick="switchTab('proofs')" id="tab-btn-proofs">Proofs & Metrics</div>
       </div>
 
       <!-- Tab 1: Handoffs and Tasks -->
@@ -710,8 +710,10 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      event.target.classList.add('active');
-      document.getElementById('tab-' + tabId).classList.add('active');
+      const btn = document.getElementById('tab-btn-' + tabId);
+      if (btn) btn.classList.add('active');
+      const content = document.getElementById('tab-' + tabId);
+      if (content) content.classList.add('active');
     }
 
     // Force simulation
@@ -1226,10 +1228,12 @@
     }
 
     // Interactive button triggers
-    async function triggerScenario() {
-      const btn = event.target;
-      btn.innerText = "Running Scenario...";
-      btn.disabled = true;
+    async function triggerScenario(btnEl) {
+      const btn = btnEl || document.getElementById("btn-run-scenario");
+      if (btn) {
+        btn.innerText = "Running Scenario...";
+        btn.disabled = true;
+      }
       try {
         const tenant = document.getElementById("tenant-select").value;
         const res = await fetch(`/admin/run-scenario?tenant_id=${tenant}`, { method: "POST" });
@@ -1238,15 +1242,19 @@
       } catch (err) {
         alert("Scenario execution error: " + err);
       } finally {
-        btn.innerText = "▶ Run Incident Scenario";
-        btn.disabled = false;
+        if (btn) {
+          btn.innerText = "Run incident scenario";
+          btn.disabled = false;
+        }
       }
     }
 
-    async function triggerLoadTest() {
-      const btn = event.target;
-      btn.innerText = "Running Load Test...";
-      btn.disabled = true;
+    async function triggerLoadTest(btnEl) {
+      const btn = btnEl || document.getElementById("btn-run-load-test");
+      if (btn) {
+        btn.innerText = "Running Load Test...";
+        btn.disabled = true;
+      }
       try {
         const res = await fetch(`/admin/run-load-test?agents=20&tasks=10`, { method: "POST" });
         await res.json();
@@ -1255,15 +1263,19 @@
       } catch (err) {
         alert("Load test error: " + err);
       } finally {
-        btn.innerText = "⚡ Run Load Test";
-        btn.disabled = false;
+        if (btn) {
+          btn.innerText = "Concurrency test";
+          btn.disabled = false;
+        }
       }
     }
 
-    async function triggerIsolationTest() {
-      const btn = event.target;
-      btn.innerText = "Verifying Isolation...";
-      btn.disabled = true;
+    async function triggerIsolationTest(btnEl) {
+      const btn = btnEl || document.getElementById("btn-run-isolation-test");
+      if (btn) {
+        btn.innerText = "Verifying Isolation...";
+        btn.disabled = true;
+      }
       try {
         const res = await fetch(`/admin/run-isolation-test`, { method: "POST" });
         await res.json();
@@ -1271,8 +1283,10 @@
       } catch (err) {
         alert("Isolation test error: " + err);
       } finally {
-        btn.innerText = "🔒 Run Isolation Test";
-        btn.disabled = false;
+        if (btn) {
+          btn.innerText = "Isolation test";
+          btn.disabled = false;
+        }
       }
     }
 
