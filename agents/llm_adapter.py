@@ -119,11 +119,37 @@ def call_gemini(
         tools=gemini_tools
     )
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=contents if contents else "Begin investigation",
-        config=config
-    )
+    model_candidates = [GEMINI_MODEL]
+    if "gemini-3.5-flash-lite" not in model_candidates:
+        model_candidates.append("gemini-3.5-flash-lite")
+
+    response = None
+    last_err = None
+    for model_name in model_candidates:
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents if contents else "Begin investigation",
+                    config=config
+                )
+                break
+            except Exception as exc:
+                last_err = exc
+                err_str = str(exc)
+                if "RESOURCE_EXHAUSTED" in err_str or "Quota exceeded" in err_str:
+                    # Break out to next candidate model
+                    break
+                if ("503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str) and attempt < 2:
+                    import time
+                    time.sleep(2.0 * (attempt + 1))
+                    continue
+                raise
+        if response is not None:
+            break
+
+    if response is None and last_err:
+        raise last_err
 
     tool_calls = []
     text_content = ""

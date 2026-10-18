@@ -10,25 +10,32 @@ shortcut: no per-graph discovery; caller must pass graph names, when multi-tenan
 import argparse
 import time
 import logging
-from typing import List
+from typing import Any, Dict, List
 
-from server.app.queries.coordination import reap_expired_leases
+from server.app.queries.coordination import reap_expired_leases, reap_expired_leases_detailed
 
 log = logging.getLogger("reaper")
 
 
 def run_reaper(graph_names: List[str]) -> int:
     """Reap expired leases across given graphs. Returns total reaped count."""
-    total = 0
+    detailed = run_reaper_detailed(graph_names)
+    return sum(len(tasks) for tasks in detailed.values())
+
+
+def run_reaper_detailed(graph_names: List[str]) -> Dict[str, List[Dict]]:
+    """Reap expired leases across given graphs. Returns dict of graph_name -> list of reaped tasks."""
+    res = {}
     for gn in graph_names:
         try:
-            n = reap_expired_leases(gn)
-            if n:
-                log.info("reaped %d task(s) from %s", n, gn)
-            total += n
+            reaped = reap_expired_leases_detailed(gn)
+            if reaped:
+                log.info("reaped %d task(s) from %s: %s", len(reaped), gn, [t["task_id"] for t in reaped])
+            res[gn] = reaped
         except Exception as exc:
             log.warning("reaper error on %s: %s", gn, exc)
-    return total
+            res[gn] = []
+    return res
 
 
 if __name__ == "__main__":

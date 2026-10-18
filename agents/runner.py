@@ -12,7 +12,7 @@ import logging
 import os
 import sys
 
-from server.app.auth import AuthContext, resolve_api_key
+from server.app.auth import AuthContext
 from agents.base import RelayAgent
 from agents.prompts import (
     TRIAGE_PROMPT,

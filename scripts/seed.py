@@ -7,8 +7,12 @@ Sets up:
 - Seed procedures in tenant and shared_runbooks
 - API keys for all 4 roles
 """
+import sys
 import time
+from pathlib import Path
 from typing import Dict, Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from server.app.graph import execute_query
 from server.app.tenancy import provision_tenant, provision_agent_key
@@ -72,7 +76,7 @@ def seed_all():
     globex_info = seed_tenant("globex", "Globex Corporation")
     print(f"Globex provisioned. Triage Key: {globex_info['keys']['triage']['raw_key']}")
 
-    print("\n✓ Seed complete. Both tenants and shared runbooks initialized.")
+    print("\n[OK] Seed complete. Both tenants and shared runbooks initialized.")
 
 
 if __name__ == "__main__":

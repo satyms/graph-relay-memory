@@ -93,3 +93,27 @@ Before wiring a query into a tool, run it in FalkorDB Browser against seed data 
 - [ ] Scripted incident completes twice without manual intervention
 - [ ] Dashboard shows handoffs, claims and the supersede chain clearly
 - [ ] Keys and tokens are not visible on screen
+
+## 9. Demo features (`tests/test_feature_*.py`)
+
+| ID | Feature | Scenario | Pass condition |
+|---|---|---|---|
+| CHA-1 | Chaos Button | Kill agent mid-task holding claim | Agent loop canceled, lease expires naturally via reaper, surviving agent recovers via `claim_task`, version increments, 0 duplicate owners |
+| CHA-2 | Chaos Button | `POST /admin/chaos/kill-agent` | Returns held tasks, emits `agent_killed`, `lease_expired`, `task_reopened`, `task_reclaimed` SSE events |
+| TT-1 | Time-Travel | Fact v1 superseded by v2 | `as_of` between returns v1 only; `as_of` after returns v2 only; `as_of` before returns no facts |
+| TT-2 | Time-Travel | `GET /admin/timeline/{tenant}` | Returns min/max timestamps and categorized markers (supersessions, handoffs, claims, procedure forks) |
+| TT-3 | Time-Travel | `GET /admin/graph/{tenant}?as_of=<ms>` | Filters facts by validity window, excludes future events and tasks |
+| EXP-1 | Click-to-Explain | Derived and superseded facts | Returns full provenance chain (`SUPERSEDES`, `DERIVED_FROM`), source events, and author agents |
+| EXP-2 | Click-to-Explain | Hypothesis with evidence | Returns `SUPPORTED_BY` evidence nodes and edges with timestamps |
+| EXP-3 | Click-to-Explain | Deterministic summary | Generates plain-text "because" rationale directly from graph data without LLM hallucination |
+| EXP-4 | Click-to-Explain | Tenant boundary check | Node ID from another tenant or nonexistent ID strictly returns `NOT_FOUND` (404) |
+| BAS-1 | Baseline Comparison | 20 workers race for 10 tasks | Relay: 0 duplicate claims; Flat memory baseline: duplicate claims detected |
+| BAS-2 | Baseline Comparison | Owner fact changed from Core to Billing | Relay answers past vs present correctly via bi-temporal query; Flat baseline overwrote history |
+| BAS-3 | Baseline Comparison | Tenant A queries Tenant B data | Relay: strict isolation (0 leaks); Flat baseline: shared storage leak |
+| BAS-4 | Baseline Comparison | `GET /admin/compare/latest` | Deterministic benchmark execution and report payload |
+| APP-1 | Approval Gate | Remediator requests approval for risky action | Creates `Approval` node and `(Task)-[:REQUIRES]->(Approval)`; other roles return `FORBIDDEN` |
+| APP-2 | Approval Gate | Risky action completion without approval | `complete_task` blocked with `FORBIDDEN` |
+| APP-3 | Approval Gate | Admin decision (`POST /admin/approvals/{id}/decide`) | Records decision with admin identity; `complete_task` succeeds on approved |
+| APP-4 | Approval Gate | Admin rejection handling | Records rejection reason; agent logs event and selects alternative procedure |
+| APP-5 | Approval Gate | Cross-tenant approval decision | Unknown or foreign tenant approval ID returns `NOT_FOUND` |
+

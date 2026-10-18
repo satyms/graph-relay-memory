@@ -6,20 +6,27 @@ Graph Hacks requires that AI coding assistant use is disclosed, and that partici
 
 | Tool | Version / model | Used for |
 |---|---|---|
-| _e.g. Claude (chat)_ | _model name_ | Brainstorming the architecture, drafting planning docs, reviewing queries |
-| _e.g. Claude Code / Cursor / Copilot_ | _version_ | Code generation, refactoring, test scaffolding |
-| _add rows_ | | |
+| Claude (chat) / Antigravity | Claude 3.7 / Antigravity Agent | Brainstorming architecture, drafting planning docs, demo features design |
+| Antigravity AI Coding Assistant | Google DeepMind Agentic Assistant | Implementation of 5 demo features (Chaos button, Time-Travel, Click-to-Explain, Baseline comparison, Approval gate), Cypher queries, test suites, and dashboard UI wiring |
 
 ## 2. What AI assisted with
 
-Check what applies and add detail.
+- [x] Brainstorming and architecture planning
+- [x] Drafting documentation (`README.md`, `docs/*`)
+- [x] Generating boilerplate (server skeleton, tests, dashboard scaffolding)
+- [x] Writing or reviewing Cypher queries
+- [x] Debugging and error recovery
+- [x] Implementing demo features: Chaos Button, Time-Travel, Click-to-Explain, Baseline Memory Comparison, and Approval Gate
 
-- [ ] Brainstorming and architecture planning
-- [ ] Drafting documentation (`README.md`, `docs/*`)
-- [ ] Generating boilerplate (server skeleton, tests, dashboard scaffolding)
-- [ ] Writing or reviewing Cypher queries
-- [ ] Debugging
-- [ ] Other: ___________
+> [!NOTE]
+> **AI Assistance Disclosure**: The five demo features (Feature 1: Chaos Button, Feature 2: Time-Travel Slider, Feature 3: Click-to-Explain, Feature 4: Baseline Comparison, and Feature 5: Approval Gate) were built with AI assistance using the Antigravity AI coding assistant.
+>
+> **Code Flagged for Team Review Before Final Release**:
+> 1. `server/app/queries/approval.py` & `server/app/tools/coordination.py`: Human-in-the-loop approval state transitions and enforcement on risky operations (`rollback_deploy`, `restart_service`, `scale_down`).
+> 2. `server/app/queries/insight.py`: Deterministic provenance traversal and plain-text "because" rationale synthesis without LLM calls.
+> 3. `server/app/queries/timeline.py` & `server/app/queries/snapshot.py`: Historical snapshot filtering using `as_of` epochs on fact validity windows.
+> 4. `server/app/main.py` (`POST /admin/chaos/kill-agent`): Asynchronous loop cancellation and background reaper lease expiry broadcasting.
+> 5. `agents/baseline_memory.py` & `scripts/compare_baseline.py`: Fair baseline flat-memory store implementation ensuring comparisons are accurate and unbiased.
 
 ## 3. What was done by the team
 
