@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Relay | Shared Graph Memory & Coordination for AI Agent Teams</title>
-  <script src="/showcase/d3.v7.min.js"></script>
   <style>
     :root {
       /* Architectural Light Blueprint Palette (Default) */
@@ -37,25 +36,6 @@
       --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
     }
 
-    [data-theme="dark"] {
-      --bg: #090d16;
-      --bg-surface: #101624;
-      --bg-surface-elevated: #162033;
-      --bg-surface-subtle: #1c273e;
-      --border: #23304a;
-      --border-focus: #38bdf8;
-      --border-accent: #0284c7;
-
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --text-dim: #64748b;
-
-      --warning: #f59e0b;
-      --success: #10b981;
-
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,77 +48,6 @@
       line-height: 1.5;
       font-size: 15px;
       -webkit-font-smoothing: antialiased;
-      transition: background 0.2s ease, color 0.2s ease;
-    }
-
-    /* Presentation mode overrides */
-    body.presentation-mode header.site-header {
-      opacity: 0.15;
-      transition: opacity 0.2s ease;
-    }
-    body.presentation-mode header.site-header:hover {
-      opacity: 1;
-    }
-    body.presentation-mode { font-size: 16.5px; }
-    body.presentation-mode .container { max-width: 1320px; }
-
-    /* Slide Deck HUD & Progress */
-    .slide-progress-bar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--topology), var(--semantic));
-      z-index: 1000;
-      transition: width 0.25s ease;
-    }
-
-    .slide-hud {
-      display: none;
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 999;
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 30px;
-      padding: 6px 14px;
-      box-shadow: var(--shadow-lg);
-      align-items: center;
-      gap: 8px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-    body.presentation-mode .slide-hud {
-      display: flex;
-    }
-
-    .slide-hud-indicator {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--text);
-      padding: 2px 8px;
-      white-space: nowrap;
-    }
-
-    .slide-hud-btn {
-      background: var(--bg-surface-elevated);
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-size: 0.75rem;
-      color: var(--text);
-      transition: all 0.15s ease;
-    }
-    .slide-hud-btn:hover {
-      border-color: var(--border-focus);
-      background: var(--bg-surface-subtle);
     }
 
     /* Layout & Containers */
@@ -159,14 +68,10 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.94);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      transition: background 0.2s ease, opacity 0.2s ease;
-    }
-    [data-theme="dark"] header.site-header {
-      background: rgba(9, 13, 22, 0.88);
     }
 
     .nav-wrap {
@@ -383,11 +288,6 @@
 
     .hero-highlight {
       background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    [data-theme="dark"] .hero-highlight {
-      background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
@@ -666,44 +566,6 @@
       overflow-x: auto;
       line-height: 1.45;
     }
-    [data-theme="dark"] .code-block {
-      background: #040810;
-      color: #e2e8f0;
-    }
-
-    /* Graph Visualizer Container */
-    .graph-container {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      height: 480px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .graph-overlay-tag {
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 4px 10px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      pointer-events: none;
-    }
-    [data-theme="dark"] .graph-overlay-tag {
-      background: rgba(9, 13, 22, 0.85);
-      color: var(--text-dim);
-    }
-
-    #demo-graph-svg {
-      width: 100%;
-      height: 100%;
-    }
 
     /* Proofs Table */
     .table-wrap {
@@ -816,33 +678,15 @@
         <li><a href="#datamodel">Data Model</a></li>
         <li><a href="#benchmarks">Benchmarks</a></li>
         <li><a href="#features">Features</a></li>
-        <li><a href="#interactive-demo">Live Demo</a></li>
-        <li><a href="#hackathon">Hackathon Fit</a></li>
       </ul>
 
       <div class="nav-actions">
-        <button class="toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Switch to Dark Mode">
-          <span id="theme-icon">🌙 Dark</span>
-        </button>
-        <button class="toggle-btn" id="pres-toggle" onclick="togglePresentationMode()" title="Toggle Clean Presentation View (Key: P)">
-          📺 Presentation
-        </button>
-        <a href="/dashboard/" target="_blank" class="btn btn-secondary btn-sm" title="Open the full Relay Studio dashboard">
+        <a href="/dashboard/" target="_blank" class="btn btn-primary btn-sm" title="Open the full Relay Studio dashboard">
           Launch Studio ↗
         </a>
       </div>
     </div>
   </header>
-
-  <!-- Presentation Slide Deck Progress & HUD -->
-  <div class="slide-progress-bar" id="slide-progress-bar" style="width: 11%;"></div>
-
-  <div class="slide-hud" id="slide-hud">
-    <button class="slide-hud-btn" onclick="prevSlide()" title="Previous Slide (← / PageUp)">◀</button>
-    <div class="slide-hud-indicator" id="slide-hud-text">Slide 1/9 • Hero: Purpose & 3 Dilemmas</div>
-    <button class="slide-hud-btn" onclick="nextSlide()" title="Next Slide (→ / PageDown)">▶</button>
-    <button class="toggle-btn btn-sm" onclick="togglePresentationMode()" title="Exit Presentation Mode" style="border-radius:20px; font-size:0.72rem; padding: 4px 10px;">✕ Exit</button>
-  </div>
 
   <!-- Section 1: Hero -->
   <section id="hero" class="hero">
@@ -862,11 +706,11 @@
       </p>
 
       <div class="hero-actions">
-        <a href="#interactive-demo" class="btn btn-primary" onclick="setDemoMode('replay'); startDemoStep(1);">
-          ▶ Try Guided Demo
+        <a href="/dashboard/" target="_blank" class="btn btn-primary">
+          ⚡ Launch Live Studio ↗
         </a>
-        <a href="/dashboard/" target="_blank" class="btn btn-secondary">
-          ⚡ Launch Live Studio
+        <a href="#scenarios" class="btn btn-secondary">
+          🔍 Problems & Results
         </a>
         <a href="#benchmarks" class="btn btn-outline">
           📊 Verified Benchmarks
@@ -1405,129 +1249,8 @@ RETURN t.id, t.claimed_by, t.version, t.lease_expires_at</pre>
     </div>
   </section>
 
-  <!-- Section 8: Interactive Demo Walkthrough ("Try Demo") -->
-  <section id="interactive-demo">
-    <div class="container">
-      <div class="section-tag">Guided Incident Scenario</div>
-      <h2 class="section-title">Interactive Incident Walkthrough</h2>
-      <p class="section-subtitle">
-        Step through <b>INC-1 (Checkout latency spike)</b>. Choose <b>Replay Mode</b> (rock-solid deterministic run from <code>scripts/replay.py</code>) or <b>Live Mode</b> (direct live FalkorDB queries).
-      </p>
 
-      <!-- Mode Selector -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-        <div style="display: flex; gap: 8px;">
-          <button class="btn btn-primary btn-sm" id="btn-mode-replay" onclick="setDemoMode('replay')">🎬 Replay Mode (Deterministic)</button>
-          <button class="btn btn-outline btn-sm" id="btn-mode-live" onclick="setDemoMode('live')">⚡ Live Mode (Real Server)</button>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 0.82rem; font-weight: 600;" id="step-indicator">Step 1 of 8</span>
-          <button class="btn btn-secondary btn-sm" onclick="prevDemoStep()">← Back</button>
-          <button class="btn btn-primary btn-sm" onclick="nextDemoStep()">Next Step →</button>
-        </div>
-      </div>
-
-      <!-- Demo Container with Live D3 Graph + Step Card -->
-      <div style="display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px;">
-        <!-- Embedded D3 Graph Canvas -->
-        <div class="graph-container">
-          <svg id="demo-graph-svg"></svg>
-          <div class="graph-overlay-tag">
-            Interactive Force Graph &bull; Drag nodes or scroll to zoom
-          </div>
-        </div>
-
-        <!-- Step Details Panel -->
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span class="scenario-tag" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;" id="demo-agent-role">agent_triage</span>
-              <span style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--text-dim);" id="demo-step-num">Step 1 / 8</span>
-            </div>
-
-            <h3 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 8px;" id="demo-step-title">Alert Received & Incident Opened</h3>
-            <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;" id="demo-step-summary">
-              Triage agent receives alert: checkout-api latency spiked to 3200ms. Opens INC-1, logs episodic observation, formulates initial hypothesis.
-            </p>
-
-            <div style="font-size: 0.74rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">TOOL CALL:</div>
-            <pre class="code-block" id="demo-tool-call" style="margin-bottom: 12px; max-height: 120px;">open_incident({"title": "INC-1: Checkout latency spike", "severity": "sev1"})</pre>
-
-            <div style="font-size: 0.74rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">GRAPH REASONING:</div>
-            <div style="background: rgba(2, 132, 199, 0.08); border-left: 3px solid var(--topology); padding: 10px; border-radius: 4px; font-size: 0.78rem; line-height: 1.45;" id="demo-explanation">
-              Triage structures the alert as a typed Incident node and Hypothesis node in FalkorDB rather than dropping loose chat text.
-            </div>
-          </div>
-
-          <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 12px;">
-            <span style="font-size: 0.74rem; color: var(--text-dim);" id="demo-mode-label">Mode: Deterministic Replay</span>
-            <div style="display: flex; gap: 6px;">
-              <button class="btn btn-secondary btn-sm" onclick="prevDemoStep()">Back</button>
-              <button class="btn btn-primary btn-sm" onclick="nextDemoStep()">Next</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 9: Hackathon Fit Matrix -->
-  <section id="hackathon">
-    <div class="container">
-      <div class="section-tag">Track 02 Compliance</div>
-      <h2 class="section-title">Hackathon Fit: Graph Hacks Track 02</h2>
-      <p class="section-subtitle">
-        How Relay fulfills every requirement for Agent Memory and Coordination on FalkorDB.
-      </p>
-
-      <div class="table-wrap">
-        <table class="proof-table">
-          <thead>
-            <tr>
-              <th>Track Focus Area</th>
-              <th>Relay Architecture Implementation</th>
-              <th>FalkorDB Load-Bearing Proof</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td><b>Episodic Memory</b></td>
-              <td>Chronological Session and Event nodes linked via <code>PRECEDES</code> and <code>PERTAINS_TO</code>.</td>
-              <td><a href="/dashboard/" target="_blank" class="badge-pass" style="text-decoration:none;">View in Studio</a></td>
-            </tr>
-            <tr>
-              <td><b>Semantic Memory</b></td>
-              <td>Entity-predicate-value facts with validity intervals <code>[valid_from, valid_to]</code> and <code>SUPERSEDES</code> edges.</td>
-              <td><a href="/dashboard/" target="_blank" class="badge-pass" style="text-decoration:none;">Lineage Tab</a></td>
-            </tr>
-            <tr>
-              <td><b>Procedural Memory</b></td>
-              <td>Runbook procedures with Laplace smoothed success rates that autonomously fork on failure.</td>
-              <td><a href="/dashboard/" target="_blank" class="badge-pass" style="text-decoration:none;">Procedure Fork</a></td>
-            </tr>
-            <tr>
-              <td><b>Atomic Coordination</b></td>
-              <td>Single-Cypher Compare-And-Set (CAS) task claims with heartbeat lease countdowns and reaper.</td>
-              <td><a href="#benchmarks" class="badge-pass" style="text-decoration:none;">0 Duplicate Claims</a></td>
-            </tr>
-            <tr>
-              <td><b>Strict Multi-Tenancy</b></td>
-              <td>Physical graph-per-tenant separation in FalkorDB with cryptographic API key binding.</td>
-              <td><a href="#benchmarks" class="badge-pass" style="text-decoration:none;">7/7 ISO Proofs Pass</a></td>
-            </tr>
-            <tr>
-              <td><b>Edge AI / Local Inference</b></td>
-              <td>Pluggable model adapter with OpenVINO support for fully local, airgapped agent execution.</td>
-              <td><span class="badge-pass">OpenVINO Ready</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 10: Footer -->
+  <!-- Footer -->
   <footer class="site-footer">
     <div class="container footer-wrap">
       <div>
@@ -1551,79 +1274,6 @@ RETURN t.id, t.claimed_by, t.version, t.lease_expires_at</pre>
   <script>
     // State management
     let showcaseData = null;
-    let currentStep = 1;
-    let demoMode = "replay"; // 'replay' or 'live'
-    let d3Simulation = null;
-    let graphSvg = null;
-    let graphG = null;
-
-    // Theme toggle
-    function toggleTheme() {
-      const html = document.documentElement;
-      const current = html.getAttribute("data-theme") || "light";
-      const next = current === "dark" ? "light" : "dark";
-      html.setAttribute("data-theme", next);
-      document.getElementById("theme-icon").innerText = next === "dark" ? "☀️ Light" : "🌙 Dark";
-      if (typeof startDemoStep === "function") {
-        startDemoStep(currentStep);
-      }
-    }
-
-    // Presentation mode toggle
-    function togglePresentationMode() {
-      document.body.classList.toggle("presentation-mode");
-      const isPres = document.body.classList.contains("presentation-mode");
-      document.getElementById("pres-toggle").innerText = isPres ? "Exit Presentation" : "📺 Presentation";
-      updateSlideHud();
-    }
-
-    // Slide Deck Navigation
-    const slides = [
-      { id: "hero", label: "Hero: Purpose & 3 Dilemmas" },
-      { id: "scenarios", label: "Problems & Proofs" },
-      { id: "workflow", label: "Incident Workflow" },
-      { id: "architecture", label: "Engine Architecture" },
-      { id: "datamodel", label: "FalkorDB Data Model" },
-      { id: "benchmarks", label: "Verified Benchmarks" },
-      { id: "features", label: "Interactive Capabilities" },
-      { id: "interactive-demo", label: "Guided Incident Walkthrough" },
-      { id: "hackathon", label: "Hackathon Track 02 Fit" }
-    ];
-    let currentSlideIndex = 0;
-
-    function goToSlide(index) {
-      if (index < 0) index = 0;
-      if (index >= slides.length) index = slides.length - 1;
-      currentSlideIndex = index;
-      const targetEl = document.getElementById(slides[index].id);
-      if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-      updateSlideHud();
-    }
-
-    function nextSlide() {
-      if (currentSlideIndex < slides.length - 1) {
-        goToSlide(currentSlideIndex + 1);
-      }
-    }
-
-    function prevSlide() {
-      if (currentSlideIndex > 0) {
-        goToSlide(currentSlideIndex - 1);
-      }
-    }
-
-    function updateSlideHud() {
-      const ind = document.getElementById("slide-hud-text");
-      if (ind) {
-        ind.innerText = `Slide ${currentSlideIndex + 1}/${slides.length} • ${slides[currentSlideIndex].label}`;
-      }
-      const prog = document.getElementById("slide-progress-bar");
-      if (prog) {
-        prog.style.width = `${((currentSlideIndex + 1) / slides.length) * 100}%`;
-      }
-    }
 
     // Cypher Workbench tabs
     const cypherSnippets = {
@@ -1820,247 +1470,8 @@ RETURN h, r, e, s.agent_id`
       }
     }
 
-    // Interactive Demo Stepper (Walkthrough)
-    function setDemoMode(mode) {
-      demoMode = mode;
-      document.getElementById("btn-mode-replay").className = mode === 'replay' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
-      document.getElementById("btn-mode-live").className = mode === 'live' ? 'btn btn-primary btn-sm' : 'btn btn-outline btn-sm';
-      document.getElementById("demo-mode-label").innerText = mode === 'replay' ? 'Mode: Deterministic Replay' : 'Mode: Live Server & Graph';
-      startDemoStep(currentStep);
-    }
-
-    function prevDemoStep() {
-      if (currentStep > 1) {
-        startDemoStep(currentStep - 1);
-      }
-    }
-
-    function nextDemoStep() {
-      if (currentStep < 8) {
-        startDemoStep(currentStep + 1);
-      } else {
-        startDemoStep(1); // loop back
-      }
-    }
-
-    function startDemoStep(stepNum) {
-      currentStep = stepNum;
-      document.getElementById("step-indicator").innerText = `Step ${stepNum} of 8`;
-      document.getElementById("demo-step-num").innerText = `Step ${stepNum} / 8`;
-
-      if (showcaseData && showcaseData.replay_steps && showcaseData.replay_steps[stepNum - 1]) {
-        const s = showcaseData.replay_steps[stepNum - 1];
-        document.getElementById("demo-agent-role").innerText = s.agent;
-        document.getElementById("demo-step-title").innerText = s.title;
-        document.getElementById("demo-step-summary").innerText = s.summary;
-        document.getElementById("demo-tool-call").innerText = `${s.tool_call.tool}(${JSON.stringify(s.tool_call.parameters, null, 2)})`;
-        document.getElementById("demo-explanation").innerText = s.explanation;
-        updateDemoGraph(s);
-      }
-    }
-
-    // D3 Interactive Graph for Demo Walkthrough
-    const demoNodes = [
-      { id: "checkout-api", label: "checkout-api", type: "Entity", memory_type: "topology" },
-      { id: "redis-cache", label: "redis-cache", type: "Entity", memory_type: "topology" },
-      { id: "payments-svc", label: "payments-svc", type: "Entity", memory_type: "topology" },
-      { id: "postgres-primary", label: "postgres-primary", type: "Entity", memory_type: "topology" },
-      { id: "auth-svc", label: "auth-svc", type: "Entity", memory_type: "topology" },
-      { id: "INC-1", label: "INC-1: Latency Spike", type: "Incident", memory_type: "coordination" },
-      { id: "hyp_cache_stall", label: "Hypothesis: Cache stall", type: "Hypothesis", memory_type: "coordination" },
-      { id: "task_investigate_cache", label: "Task: Investigate cache", type: "Task", memory_type: "coordination" },
-      { id: "hnd_triage_to_inv", label: "Handoff: triage -> inv", type: "Handoff", memory_type: "coordination" },
-      { id: "proc_restart_redis_v1", label: "restart-redis v1", type: "Procedure", memory_type: "procedural" },
-      { id: "proc_restart_redis_v2", label: "restart-redis v2", type: "Procedure", memory_type: "procedural" },
-      { id: "appr_rollback_checkout", label: "Approval: rollback", type: "Approval", memory_type: "coordination" },
-      { id: "fact_payments_owner_v2", label: "Fact: owner = Team Billing", type: "Fact", memory_type: "semantic" }
-    ];
-
-    const demoEdges = [
-      { source: "checkout-api", target: "payments-svc" },
-      { source: "checkout-api", target: "redis-cache" },
-      { source: "payments-svc", target: "postgres-primary" },
-      { source: "hyp_cache_stall", target: "INC-1" },
-      { source: "task_investigate_cache", target: "INC-1" },
-      { source: "hnd_triage_to_inv", target: "task_investigate_cache" },
-      { source: "proc_restart_redis_v2", target: "proc_restart_redis_v1" },
-      { source: "appr_rollback_checkout", target: "INC-1" },
-      { source: "payments-svc", target: "fact_payments_owner_v2" }
-    ];
-
-    const demoColorMap = {
-      topology: '#0284c7',
-      coordination: '#d97706',
-      procedural: '#059669',
-      semantic: '#7c3aed',
-      episodic: '#2563eb'
-    };
-
-    function initDemoGraph() {
-      const container = document.querySelector(".graph-container");
-      const width = container.clientWidth || 600;
-      const height = container.clientHeight || 480;
-
-      graphSvg = d3.select("#demo-graph-svg")
-        .attr("viewBox", [0, 0, width, height]);
-
-      graphSvg.append("defs").selectAll("marker")
-        .data(["arrow"])
-        .join("marker")
-        .attr("id", "arrow")
-        .attr("viewBox", "0 -5 10 10")
-        .attr("refX", 20)
-        .attr("refY", 0)
-        .attr("markerWidth", 6)
-        .attr("markerHeight", 6)
-        .attr("orient", "auto")
-        .append("path")
-        .attr("fill", "#94a3b8")
-        .attr("d", "M0,-5L10,0L0,5");
-
-      graphG = graphSvg.append("g");
-      graphSvg.call(d3.zoom().scaleExtent([0.2, 3]).on("zoom", (e) => graphG.attr("transform", e.transform)));
-
-      renderDemoGraphSubset(["checkout-api", "redis-cache", "payments-svc", "postgres-primary", "auth-svc", "INC-1"]);
-    }
-
-    function renderDemoGraphSubset(visibleIds, highlightIds = []) {
-      if (!graphG) return;
-      graphG.selectAll("*").remove();
-
-      const container = document.querySelector(".graph-container");
-      const width = container.clientWidth || 600;
-      const height = container.clientHeight || 480;
-
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const linkStroke = isDark ? "#475569" : "#cbd5e1";
-      const textFill = isDark ? "#f8fafc" : "#0f172a";
-      const textHalo = isDark ? "#090d16" : "#ffffff";
-
-      const subNodes = demoNodes.filter(n => visibleIds.includes(n.id));
-      const subNodeIds = new Set(subNodes.map(n => n.id));
-      const subEdges = demoEdges.filter(e => subNodeIds.has(e.source.id || e.source) && subNodeIds.has(e.target.id || e.target));
-
-      d3Simulation = d3.forceSimulation(subNodes)
-        .force("link", d3.forceLink(subEdges).id(d => d.id).distance(80))
-        .force("charge", d3.forceManyBody().strength(-180))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collision", d3.forceCollide().radius(24));
-
-      const link = graphG.append("g")
-        .attr("stroke", linkStroke)
-        .attr("stroke-opacity", 0.7)
-        .selectAll("line")
-        .data(subEdges)
-        .join("line")
-        .attr("stroke-width", 1.5)
-        .attr("marker-end", "url(#arrow)");
-
-      const node = graphG.append("g")
-        .selectAll("g")
-        .data(subNodes)
-        .join("g")
-        .style("cursor", "pointer");
-
-      node.append("circle")
-        .attr("r", d => d.type === "Entity" ? 13 : 10)
-        .attr("fill", d => demoColorMap[d.memory_type] || '#64748b')
-        .attr("stroke", d => highlightIds.includes(d.id) ? "#d97706" : (isDark ? "#1e293b" : "#ffffff"))
-        .attr("stroke-width", d => highlightIds.includes(d.id) ? 3.5 : 1.5);
-
-      node.append("text")
-        .text(d => d.label)
-        .attr("x", 14)
-        .attr("y", 4)
-        .attr("fill", textFill)
-        .attr("font-size", "11px")
-        .attr("font-weight", "600")
-        .attr("font-family", "ui-monospace, monospace")
-        .attr("paint-order", "stroke")
-        .attr("stroke", textHalo)
-        .attr("stroke-width", 3.5);
-
-      d3Simulation.on("tick", () => {
-        link
-          .attr("x1", d => d.source.x)
-          .attr("y1", d => d.source.y)
-          .attr("x2", d => d.target.x)
-          .attr("y2", d => d.target.y);
-
-        node
-          .attr("transform", d => `translate(${d.x},${d.y})`);
-      });
-    }
-
-    function updateDemoGraph(stepData) {
-      const stepIndex = stepData.step;
-      const baseVisible = ["checkout-api", "redis-cache", "payments-svc", "postgres-primary", "auth-svc"];
-      if (stepIndex >= 1) baseVisible.push("INC-1", "hyp_cache_stall");
-      if (stepIndex >= 2) baseVisible.push("task_investigate_cache", "hnd_triage_to_inv");
-      if (stepIndex >= 4) baseVisible.push("proc_restart_redis_v1");
-      if (stepIndex >= 5) baseVisible.push("proc_restart_redis_v2");
-      if (stepIndex >= 6) baseVisible.push("appr_rollback_checkout");
-      if (stepIndex >= 7) baseVisible.push("fact_payments_owner_v2");
-
-      renderDemoGraphSubset(baseVisible, stepData.highlight_nodes || []);
-    }
-
-    // Keyboard & Scroll Deck Navigation
-    window.addEventListener("keydown", (e) => {
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
-
-      if (e.key === "ArrowRight" || e.key === "PageDown") {
-        const demoEl = document.getElementById("interactive-demo");
-        const rect = demoEl ? demoEl.getBoundingClientRect() : null;
-        const inDemoView = rect && rect.top < window.innerHeight * 0.7 && rect.bottom > window.innerHeight * 0.3;
-        if (inDemoView) {
-          nextDemoStep();
-        } else {
-          nextSlide();
-        }
-        e.preventDefault();
-      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
-        const demoEl = document.getElementById("interactive-demo");
-        const rect = demoEl ? demoEl.getBoundingClientRect() : null;
-        const inDemoView = rect && rect.top < window.innerHeight * 0.7 && rect.bottom > window.innerHeight * 0.3;
-        if (inDemoView) {
-          prevDemoStep();
-        } else {
-          prevSlide();
-        }
-        e.preventDefault();
-      } else if (e.key === "p" || e.key === "P") {
-        togglePresentationMode();
-        e.preventDefault();
-      } else if (e.key === "Escape") {
-        if (document.body.classList.contains("presentation-mode")) {
-          togglePresentationMode();
-        }
-      }
-    });
-
-    window.addEventListener("scroll", () => {
-      const scrollPos = window.scrollY + 220;
-      slides.forEach((s, idx) => {
-        const el = document.getElementById(s.id);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            if (currentSlideIndex !== idx) {
-              currentSlideIndex = idx;
-              updateSlideHud();
-            }
-          }
-        }
-      });
-    });
-
     window.addEventListener("DOMContentLoaded", async () => {
-      initDemoGraph();
       await loadShowcaseData();
-      startDemoStep(1);
-      updateSlideHud();
     });
   </script>
 </body>
