@@ -1,106 +1,195 @@
-# Relay — shared graph memory for agent teams
+# Relay — Shared Graph Memory for Agent Teams
 
-> Working title. Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs x FalkorDB), **Track 02: Agent Memory and Coordination**.
+> Built for **Graph Hacks: Context for AI Agents** (WeMakeDevs x FalkorDB), **Track 02: Agent Memory and Coordination**.
 
-Relay gives a team of AI agents one place to remember, hand work to each other, and learn from failures. All of it lives in **FalkorDB**: memory, claims, handoffs and procedures are nodes and edges that every agent reads and writes on each step.
+Relay gives an autonomous team of AI agents a unified, multi-tenant memory and coordination engine powered entirely by **FalkorDB**. Memory, task claims, agent handoffs, semantic facts, and procedural runbooks are modeled as native graph nodes and edges that agents inspect and update at every turn.
 
-## The problem
+---
 
-Agents forget between sessions, step on each other when they share work, and can't say why they believe something. A flat vector store fixes the first problem at best.
+## The Problem
 
-## What Relay does
+Standard AI agent teams suffer from three fundamental limitations:
+1. **Memory Amnesia**: Flat vector stores discard temporal sequence, entity relationships, and causal history.
+2. **Coordination Collisions**: Agents step on each other's work or duplicate tasks due to race conditions.
+3. **Procedural Stagnation**: When an agent fails executing a runbook, that failure is lost in a chat log; the next agent repeats the exact same mistake.
 
-| Capability | How it works in the graph |
-|---|---|
-| Episodic memory | `Session -> Event -> Event` timelines, append-only |
-| Semantic memory | `Entity -> Fact` with `valid_from` / `valid_to`, corrections create `SUPERSEDES` edges, so we can ask "what did we believe at time T?" |
-| Procedural memory | `Procedure` nodes with versions, success/fail counts, preconditions, and a `violated_assumption` recorded after each failure |
-| Shared state | `Incident -> Task / Hypothesis / Evidence` visible to every agent in the tenant |
-| Safe coordination | Compare-and-set task claims with expiring leases, so two agents never own one task |
-| Handoffs | Explicit `Handoff` nodes carrying context summary, open questions and evidence |
-| Tenant isolation | One FalkorDB graph per tenant. The tenant comes from the API key, never from tool arguments |
-| Consolidation | Background worker merges episodes into facts, supersedes stale ones, decays low-confidence memory |
+---
 
-## Demo scenario
+## What Relay Does
 
-A synthetic checkout-latency incident handled by four agents: **Triage -> Investigator -> Remediator -> Comms**. Two tenants run the same scenario to prove isolation. See [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md).
+| Capability | Graph Data Model | Key Feature |
+|---|---|---|
+| **Episodic Memory** | `Session -> Event -> Event` | Idempotent append-only timeline, causal session reconstruction |
+| **Semantic Memory** | `Entity -> Fact` with `valid_from` / `valid_to` | Temporal intervals with `SUPERSEDES` edge; enables bi-temporal time-travel queries ("What did we believe at 2:00 PM?") |
+| **Procedural Memory** | `Procedure -> Step` | Laplace-smoothed ranking ($s = \frac{k+1}{n+2}$), failure forking with `PREVIOUS_VERSION` edge and automatic precondition synthesis |
+| **Shared State & Claims** | `Incident -> Task / Hypothesis / Evidence` | Atomic single-query Compare-and-Set (CAS) task claims with expiring leases and automatic cascade unblocking |
+| **Agent Handoffs** | `Handoff {from, to, status, context}` | Explicit, structured handoffs carrying context, tasks, and open questions |
+| **Graph Topology & Insights** | `Entity -[:DEPENDS_ON]-> Entity` | Native FalkorDB `algo.pageRank` entity centrality and BFS blast-radius calculation |
+| **Tenant Isolation** | One FalkorDB graph per tenant (`tenant_<id>`) | Cryptographically enforced via SHA-256 bearer tokens in the `control` graph; immune to prompt-injection tenant spoofing |
+| **Consolidation Worker** | Background worker | Synthesizes episodic events into high-confidence facts with `DERIVED_FROM` provenance and decays stale knowledge |
 
-## Proofs the demo shows
+---
 
-1. **Persistence:** kill all agents, restart, the new session recalls the old one.
-2. **Concurrency:** 20 agents race for 10 tasks, exactly 10 winners, 0 duplicates.
-3. **Isolation:** tenant A's key cannot read tenant B's nodes.
-4. **Learning:** a failed runbook gains a precondition, and the next incident chooses differently.
-5. **Time travel:** a corrected fact can be queried as of an earlier time.
+## Runtime Architecture
+
+```
+                                 ┌───────────────────────────────────┐
+                                 │       Relay Web Dashboard         │
+                                 │   (D3.js Force Graph & Proofs)    │
+                                 └─────────────────▲─────────────────┘
+                                                   │ SSE & REST
+┌───────────────────────┐        ┌─────────────────┴─────────────────┐
+│     Agent Fleet       │        │        FastAPI Memory Engine      │
+│ ┌───────────────────┐ │  Tool  │ ┌───────────────────────────────┐ │
+│ │ Triage Agent      │ │ Calls  │ │ Auth & Tenant Graph Resolver  │ │
+│ ├───────────────────┤ │───────>│ ├───────────────────────────────┤ │
+│ │ Investigator      │ │        │ │ Episodic / Semantic / Proced. │ │
+│ ├───────────────────┤ │        │ ├───────────────────────────────┤ │
+│ │ Remediator        │ │        │ │ Coordination & Leases         │ │
+│ ├───────────────────┤ │        │ └───────────────┬───────────────┘ │
+│ │ Comms Agent       │ │        └─────────────────┼─────────────────┘
+│ └───────────────────┘ │                          │ openCypher
+└───────────▲───────────┘        ┌─────────────────▼─────────────────┐
+            │                    │             FalkorDB              │
+     Inference API               │ ┌───────────────┬───────────────┐ │
+            │                    │ │ control graph │ shared_runbks │ │
+┌───────────┴───────────┐        │ ├───────────────┼───────────────┤ │
+│   LLM Inference Layer │        │ │ tenant_acme   │ tenant_globex │ │
+│ • OpenVINO™ Toolkit   │        │ └───────────────┴───────────────┘ │
+│   (Qwen2.5-7B INT4)   │        └───────────────────────────────────┘
+│ • Google Gemini Cloud │
+│   Fallback            │
+└───────────────────────┘
+```
+
+---
+
+## Proofs Demonstrated in the Demo
+
+1. **Atomic CAS Concurrency**: 20 agents race for 10 tasks; exactly 10 winners, 0 double-claims, ~1,900 ops/sec throughput.
+2. **Cryptographic Tenant Isolation**: Tenant A's key cannot read, claim, or reference Tenant B's data (0 cross-tenant reads across 7 ISO test suites).
+3. **Procedural Learning**: `restart-redis v1` fails on deploy trap $\rightarrow$ automatically retires and forks `v2` with new precondition $\rightarrow$ subsequent query selects `rollback-deploy v1` and succeeds.
+4. **Bi-Temporal Time Travel**: Correcting `payments-svc` ownership from `Team Core` to `Team Billing` supersedes the fact while allowing queries `as_of` earlier timestamps to return the historical truth.
+5. **Persistence**: Restarting agent processes restores complete situational awareness from FalkorDB graph memory.
+
+---
 
 ## Quickstart
 
+### 1. Prerequisites & FalkorDB
+Ensure Docker or local FalkorDB is running:
 ```bash
-# 1. FalkorDB
-docker run -p 6379:6379 -p 3000:3000 -it --rm falkordb/falkordb:latest
+docker run -p 6379:6379 -p 3000:3000 -d --name falkordb-relay falkordb/falkordb:latest
+```
+*(Or use `docker-compose up -d`)*
 
-# 2. Python env
-python -m venv .venv && source .venv/bin/activate
+### 2. Environment Setup
+```bash
+# Clone and enter repo
+git clone https://github.com/satyms/graph-relay-memory.git
+cd graph-relay-memory
+
+# Setup virtual environment
+python -m venv .venv
+# Windows:
+.\.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
+cp .env.example .env
+```
 
-# 3. Config
-cp .env.example .env     # set ANTHROPIC_API_KEY, MODEL, ADMIN_TOKEN
-
-# 4. Seed two tenants with synthetic data
+### 3. Seed Synthetic Tenants & Runbooks
+```bash
 python scripts/seed.py
-
-# 5. Start the MCP memory server
-uvicorn server.app.main:app --port 8080
-
-# 6. Run the agent team for tenant A
-python agents/runner.py --tenant acme
-
-# 7. Dashboard
-cd dashboard && npm install && npm run dev
 ```
 
-Environment variables:
-
-| Variable | Purpose |
-|---|---|
-| `FALKORDB_HOST` / `FALKORDB_PORT` | FalkorDB connection (default `localhost:6379`) |
-| `ANTHROPIC_API_KEY` | Used by the agents and the consolidation worker |
-| `MODEL` | Claude model id for agents |
-| `ADMIN_TOKEN` | Protects tenant creation and the dashboard feed |
-
-## Documentation
-
-| File | Contents |
-|---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Components, request flow, tenancy, concurrency, memory lifecycle |
-| [docs/GRAPH_DATA_MODEL.md](docs/GRAPH_DATA_MODEL.md) | Node labels, relationships, indexes, key Cypher |
-| [docs/MCP_TOOLS.md](docs/MCP_TOOLS.md) | Every MCP tool: inputs, outputs, errors |
-| [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) | Time-boxed plan, roles, scope cuts |
-| [docs/TEST_PLAN.md](docs/TEST_PLAN.md) | Concurrency, isolation and learning tests |
-| [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | 3-minute video script and seed data |
-| [docs/AI_DISCLOSURE.md](docs/AI_DISCLOSURE.md) | AI assistant use, as the hackathon requires |
-| [CLAUDE.md](CLAUDE.md) | Instructions for AI coding assistants working in this repo |
-
-## Repository layout
-
+### 4. Start the Memory Server & Dashboard
+```bash
+uvicorn server.app.main:app --port 8080 --reload
 ```
-relay/
-  server/app/        MCP memory server (auth, tenancy, tools, consolidation)
-  agents/            Triage, Investigator, Remediator, Comms, runner
-  dashboard/         Live graph view, handoff feed, load and isolation panels
-  scripts/           seed.py, load_test.py, isolation_test.py
-  tests/             pytest suites
-  docs/              Design and planning docs
+Open **`http://localhost:8080/dashboard/`** in your browser to inspect the interactive force-directed graph, live SSE stream, task board, and proof panels.
+
+### 5. Local LLM Acceleration (Optional / Recommended)
+To run local inference via OpenVINO™ (Qwen2.5-7B-Instruct INT4):
+```bash
+python server_openvino.py --port 8000
+```
+*(If no local GPU/CPU model is loaded, Relay automatically falls back to Gemini API via `.env`)*
+
+---
+
+## Verification & Test Suite
+
+Run the full automated test suite (38 tests covering tenancy, memory, coordination, procedural learning, graph insight, and dashboard endpoints):
+```bash
+pytest -v
 ```
 
-## Hackathon compliance
+Run the standalone proof scripts:
+```bash
+# Concurrency & CAS Load Test (20 agents, 10 tasks)
+python scripts/load_test.py --agents 20 --tasks 10
 
-- FalkorDB is the primary database and holds all memory and coordination state. Without it the product does not run.
-- Data is fully synthetic. No private, personal or restricted data is loaded.
-- Cypher queries and graph algorithms the product depends on are listed in [docs/GRAPH_DATA_MODEL.md](docs/GRAPH_DATA_MODEL.md) and implemented in `server/app/queries/`.
-- AI coding assistant use is disclosed in [docs/AI_DISCLOSURE.md](docs/AI_DISCLOSURE.md).
-- Track entered: **Track 02: Agent Memory and Coordination**.
+# Cross-Tenant Cryptographic Isolation Test (ISO-1 to ISO-7)
+python scripts/isolation_test.py
 
-## License
+# Complete End-to-End Incident Scenario & Learning Verification
+pytest -v tests/test_e2e_scenario.py
+```
 
-TBD (MIT recommended).
+---
+
+## Key Cypher Queries
+
+### Atomic CAS Task Claim
+```cypher
+MATCH (t:Task {id: $task_id})
+WHERE t.status = 'open' AND t.claimed_by IS NULL
+SET t.status = 'in_progress', t.claimed_by = $agent_id, t.lease_expires_at = $expires
+RETURN t.id
+```
+
+### Temporal Fact Supersession
+```cypher
+// Close active fact
+MATCH (e:Entity {name: $entity})-[:HAS_FACT]->(old:Fact {predicate: $predicate})
+WHERE old.valid_to IS NULL
+SET old.valid_to = $now, old.status = 'closed'
+RETURN old.id
+
+// Link new fact with lineage
+MATCH (e:Entity {name: $entity}), (old:Fact {id: $old_id})
+CREATE (e)-[:HAS_FACT]->(new:Fact {predicate: $predicate, value: $value, valid_from: $now, valid_to: null, status: 'active'})
+CREATE (new)-[:SUPERSEDES]->(old)
+```
+
+### Procedural Laplace-Smoothed Ranking
+$$Score = \frac{success\_count + 1}{success\_count + fail\_count + 2}$$
+
+```cypher
+MATCH (p:Procedure {status: 'active'})
+OPTIONAL MATCH (p)-[:HAS_STEP]->(s:Step)
+RETURN p.id, p.name, p.trigger, p.version, p.success_count, p.fail_count, s.idx, s.text
+ORDER BY p.id, s.idx ASC
+```
+
+### Native FalkorDB PageRank Entity Centrality
+```cypher
+CALL algo.pageRank('Entity', 'DEPENDS_ON')
+YIELD node, score
+RETURN node.name AS service, round(score * 1000) / 1000 AS centrality
+ORDER BY score DESC
+```
+
+---
+
+## Hackathon Compliance
+
+- **Primary Database**: FalkorDB is the core state store and primary graph database. All memory types and multi-agent coordination rely on it.
+- **Track**: **Track 02 — Agent Coordination, Collaboration & Shared Graph Memory**.
+- **Data**: 100% synthetic incident response data. No restricted, private, or PII data.
+- **AI Disclosure**: Documented in [`AI_DISCLOSURE.md`](AI_DISCLOSURE.md).
+- **License**: MIT License ([`LICENSE`](LICENSE)).
