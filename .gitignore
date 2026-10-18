@@ -221,3 +221,8 @@ __marimo__/
 
 # Local OpenVINO quantized model weights
 models/
+
+# Graphify temporary cache
+graphify-out/cache/
+graphify-out/.*
+

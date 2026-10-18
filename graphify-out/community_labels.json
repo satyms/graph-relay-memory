@@ -1,0 +1,18 @@
+{
+  "0": "Incident Scenario & Tool Dispatch",
+  "1": "CAS Concurrency & Query Execution",
+  "2": "Relay Agent Fleet & Execution Loop",
+  "3": "Procedural Memory & Laplace Ranking",
+  "4": "FastAPI Engine & SSE Real-time Server",
+  "5": "Consolidation Worker & Fact Derivation",
+  "6": "Semantic Memory & Supersession History",
+  "7": "OpenVINO Model Server & LLM Adapter",
+  "8": "Tenancy Lifecycle & Key Provisioning",
+  "9": "Authentication & Cryptographic Tokens",
+  "10": "Auth Context & Tenant Binding",
+  "11": "Concurrency Benchmark & Seed Scripts",
+  "12": "Cross-Tenant Isolation & Seeding",
+  "13": "PageRank Centrality & Blast Radius",
+  "14": "Control Graph Schema & Key Lookup",
+  "15": "Server Application Core"
+}
