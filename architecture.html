@@ -204,22 +204,24 @@ Object.keys(nodeEls).forEach(function(id){
   g.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();show(id);}});
 });
 
-/* trace of one claim_task call */
+/* trace of one claim_task call starting from LLM turn */
 var T=[
-['a-remed','The Remediator sends claim_task with its bearer key.'],
-['auth','The key is hashed and resolved to an AuthContext. The tenant graph comes from this lookup, never from the request.'],
-['tools','dispatch_tool_call routes the call to the coordination handler. The attempt is audited.'],
-['svc-coo','The handler runs one compare-and-set query that matches only open tasks or tasks with an expired lease.'],
-['query','execute_query sends the parameterised Cypher to the tenant graph.'],
-['db-acme','FalkorDB applies the write atomically. One agent gets a row back, and the rest get CONFLICT.'],
-['sse','The change is broadcast as an event.'],
-['dash','The dashboard graph updates. The task turns claimed and its lease countdown starts.']
+['llm','1. LLM Turn: Model receives incident context from memory, evaluates open tasks, and generates tool call: claim_task.'],
+['a-remed','2. Agent Client: Remediator agent client dispatches claim_task over MCP with its cryptographic bearer key.'],
+['auth','3. Auth & Tenant Context: Key is hashed to an immutable AuthContext; tenant graph (tenant_acme) is locked.'],
+['tools','4. Tool Dispatch & Audit: dispatch_tool_call routes call to coordination handler and logs audit entry in control graph.'],
+['svc-coo','5. Coordination Logic: Handler compiles atomic Compare-And-Set query matching only open or expired-lease tasks.'],
+['query','6. Query Execution: execute_query delivers parameterised Cypher to FalkorDB (zero raw user Cypher accepted).'],
+['db-acme','7. Atomic FalkorDB Mutation: FalkorDB applies the CAS write. Exactly one agent wins the lease; competitors get CONFLICT.'],
+['sse','8. Live SSE Broadcast: Graph mutation event is pushed instantly to connected dashboards over Server-Sent Events.'],
+['dash','9. Telemetry Update: Studio D3 graph shifts task to claimed with a 10s countdown lease timer.'],
+['llm','10. Result Loop: {status: "claimed", lease_ms: 10000} returns to model context, completing perception-action turn.']
 ];
 var caption=document.getElementById('caption'),DEFAULT=caption.textContent,idx=-1,timer=null;
 function clearMarks(){Object.keys(nodeEls).forEach(function(k){nodeEls[k].classList.remove('on','done');});}
 function next(){
   idx++;
-  if(idx>=T.length){clearInterval(timer);timer=null;caption.textContent='Done. One claim, one owner, every step recorded.';
+  if(idx>=T.length){clearInterval(timer);timer=null;caption.textContent='Done. Perception-action cycle complete: LLM decided, atomic claim leased in FalkorDB, and result returned to model context.';
     nodeEls[T[T.length-1][0]].classList.remove('on');nodeEls[T[T.length-1][0]].classList.add('done');return;}
   if(idx>0){var prev=nodeEls[T[idx-1][0]];prev.classList.remove('on');prev.classList.add('done');}
   nodeEls[T[idx][0]].classList.add('on');
