@@ -75,3 +75,14 @@ def test_showcase_data_no_secrets(client):
     ]
     for needle in forbidden_needles:
         assert needle not in content, f"Found forbidden secret marker '{needle}' in /showcase/data"
+
+
+def test_showcase_chaos_kill_proxy(client):
+    """Verify unauthenticated safe chaos proxy triggers agent kill for showcase demo."""
+    res = client.post("/showcase/chaos/kill-agent", json={"tenant": "acme", "agent_role": "triage"})
+    assert res.status_code == 200
+    d = res.json()
+    assert d["ok"] is True
+    assert d["killed_agent"] == "agent_triage"
+    assert d["tenant"] == "acme"
+

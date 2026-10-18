@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,16 +7,17 @@
   <script src="/showcase/d3.v7.min.js"></script>
   <style>
     :root {
-      --bg: #090d16;
-      --bg-surface: #101624;
-      --bg-surface-elevated: #162033;
-      --bg-surface-subtle: #1c273e;
-      --border: #23304a;
-      --border-focus: #3b82f6;
+      /* Architectural Light Blueprint Palette (Default) */
+      --bg: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f1f5f9;
+      --bg-surface-subtle: #e2e8f0;
+      --border: #cbd5e1;
+      --border-focus: #0284c7;
       --border-accent: #0284c7;
       
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
+      --text: #0f172a;
+      --text-muted: #475569;
       --text-dim: #64748b;
 
       /* Memory Layer Signal Palette */
@@ -26,32 +27,35 @@
       --semantic: #7c3aed;
       --episodic: #2563eb;
       --danger: #e11d48;
-      --warning: #f59e0b;
-      --success: #10b981;
+      --warning: #b45309;
+      --success: #059669;
 
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, system-ui, sans-serif;
       --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", monospace;
+      --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+      --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+    }
+
+    [data-theme="dark"] {
+      --bg: #090d16;
+      --bg-surface: #101624;
+      --bg-surface-elevated: #162033;
+      --bg-surface-subtle: #1c273e;
+      --border: #23304a;
+      --border-focus: #38bdf8;
+      --border-accent: #0284c7;
+
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --warning: #f59e0b;
+      --success: #10b981;
+
       --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
       --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-    }
-
-    [data-theme="light"] {
-      --bg: #f8fafc;
-      --bg-surface: #ffffff;
-      --bg-surface-elevated: #f1f5f9;
-      --bg-surface-subtle: #e2e8f0;
-      --border: #cbd5e1;
-      --border-focus: #2563eb;
-      --border-accent: #0284c7;
-
-      --text: #0f172a;
-      --text-muted: #475569;
-      --text-dim: #64748b;
-
-      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -68,9 +72,74 @@
     }
 
     /* Presentation mode overrides */
-    body.presentation-mode header.site-header { display: none; }
-    body.presentation-mode { font-size: 17px; }
-    body.presentation-mode .container { max-width: 1400px; }
+    body.presentation-mode header.site-header {
+      opacity: 0.15;
+      transition: opacity 0.2s ease;
+    }
+    body.presentation-mode header.site-header:hover {
+      opacity: 1;
+    }
+    body.presentation-mode { font-size: 16.5px; }
+    body.presentation-mode .container { max-width: 1320px; }
+
+    /* Slide Deck HUD & Progress */
+    .slide-progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--topology), var(--semantic));
+      z-index: 1000;
+      transition: width 0.25s ease;
+    }
+
+    .slide-hud {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 6px 14px;
+      box-shadow: var(--shadow-lg);
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    body.presentation-mode .slide-hud {
+      display: flex;
+    }
+
+    .slide-hud-indicator {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text);
+      padding: 2px 8px;
+      white-space: nowrap;
+    }
+
+    .slide-hud-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.75rem;
+      color: var(--text);
+      transition: all 0.15s ease;
+    }
+    .slide-hud-btn:hover {
+      border-color: var(--border-focus);
+      background: var(--bg-surface-subtle);
+    }
 
     /* Layout & Containers */
     .container {
@@ -90,14 +159,14 @@
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(9, 13, 22, 0.88);
+      background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      transition: background 0.2s ease;
+      transition: background 0.2s ease, opacity 0.2s ease;
     }
-    [data-theme="light"] header.site-header {
-      background: rgba(248, 250, 252, 0.88);
+    [data-theme="dark"] header.site-header {
+      background: rgba(9, 13, 22, 0.88);
     }
 
     .nav-wrap {
@@ -313,6 +382,11 @@
     }
 
     .hero-highlight {
+      background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    [data-theme="dark"] .hero-highlight {
       background: linear-gradient(135deg, #38bdf8 0%, #a855f7 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -582,19 +656,19 @@
 
     /* Code Block & Cypher Display */
     .code-block {
-      background: #040810;
+      background: #f1f5f9;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 14px;
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      color: #e2e8f0;
+      color: #0f172a;
       overflow-x: auto;
       line-height: 1.45;
     }
-    [data-theme="light"] .code-block {
-      background: #0f172a;
-      color: #f8fafc;
+    [data-theme="dark"] .code-block {
+      background: #040810;
+      color: #e2e8f0;
     }
 
     /* Graph Visualizer Container */
@@ -605,6 +679,25 @@
       height: 480px;
       position: relative;
       overflow: hidden;
+    }
+
+    .graph-overlay-tag {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      pointer-events: none;
+    }
+    [data-theme="dark"] .graph-overlay-tag {
+      background: rgba(9, 13, 22, 0.85);
+      color: var(--text-dim);
     }
 
     #demo-graph-svg {
@@ -728,10 +821,10 @@
       </ul>
 
       <div class="nav-actions">
-        <button class="toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
-          <span id="theme-icon">☀️ Light</span>
+        <button class="toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Switch to Dark Mode">
+          <span id="theme-icon">🌙 Dark</span>
         </button>
-        <button class="toggle-btn" id="pres-toggle" onclick="togglePresentationMode()" title="Toggle Clean Presentation View">
+        <button class="toggle-btn" id="pres-toggle" onclick="togglePresentationMode()" title="Toggle Clean Presentation View (Key: P)">
           📺 Presentation
         </button>
         <a href="/dashboard/" target="_blank" class="btn btn-secondary btn-sm" title="Open the full Relay Studio dashboard">
@@ -740,6 +833,16 @@
       </div>
     </div>
   </header>
+
+  <!-- Presentation Slide Deck Progress & HUD -->
+  <div class="slide-progress-bar" id="slide-progress-bar" style="width: 11%;"></div>
+
+  <div class="slide-hud" id="slide-hud">
+    <button class="slide-hud-btn" onclick="prevSlide()" title="Previous Slide (← / PageUp)">◀</button>
+    <div class="slide-hud-indicator" id="slide-hud-text">Slide 1/9 • Hero: Purpose & 3 Dilemmas</div>
+    <button class="slide-hud-btn" onclick="nextSlide()" title="Next Slide (→ / PageDown)">▶</button>
+    <button class="toggle-btn btn-sm" onclick="togglePresentationMode()" title="Exit Presentation Mode" style="border-radius:20px; font-size:0.72rem; padding: 4px 10px;">✕ Exit</button>
+  </div>
 
   <!-- Section 1: Hero -->
   <section id="hero" class="hero">
@@ -1330,7 +1433,7 @@ RETURN t.id, t.claimed_by, t.version, t.lease_expires_at</pre>
         <!-- Embedded D3 Graph Canvas -->
         <div class="graph-container">
           <svg id="demo-graph-svg"></svg>
-          <div style="position: absolute; bottom: 12px; left: 12px; font-size: 0.72rem; color: var(--text-dim); background: rgba(9, 13, 22, 0.7); padding: 4px 8px; border-radius: 4px;">
+          <div class="graph-overlay-tag">
             Interactive Force Graph &bull; Drag nodes or scroll to zoom
           </div>
         </div>
@@ -1457,10 +1560,13 @@ RETURN t.id, t.claimed_by, t.version, t.lease_expires_at</pre>
     // Theme toggle
     function toggleTheme() {
       const html = document.documentElement;
-      const current = html.getAttribute("data-theme");
+      const current = html.getAttribute("data-theme") || "light";
       const next = current === "dark" ? "light" : "dark";
       html.setAttribute("data-theme", next);
       document.getElementById("theme-icon").innerText = next === "dark" ? "☀️ Light" : "🌙 Dark";
+      if (typeof startDemoStep === "function") {
+        startDemoStep(currentStep);
+      }
     }
 
     // Presentation mode toggle
@@ -1468,6 +1574,55 @@ RETURN t.id, t.claimed_by, t.version, t.lease_expires_at</pre>
       document.body.classList.toggle("presentation-mode");
       const isPres = document.body.classList.contains("presentation-mode");
       document.getElementById("pres-toggle").innerText = isPres ? "Exit Presentation" : "📺 Presentation";
+      updateSlideHud();
+    }
+
+    // Slide Deck Navigation
+    const slides = [
+      { id: "hero", label: "Hero: Purpose & 3 Dilemmas" },
+      { id: "scenarios", label: "Problems & Proofs" },
+      { id: "workflow", label: "Incident Workflow" },
+      { id: "architecture", label: "Engine Architecture" },
+      { id: "datamodel", label: "FalkorDB Data Model" },
+      { id: "benchmarks", label: "Verified Benchmarks" },
+      { id: "features", label: "Interactive Capabilities" },
+      { id: "interactive-demo", label: "Guided Incident Walkthrough" },
+      { id: "hackathon", label: "Hackathon Track 02 Fit" }
+    ];
+    let currentSlideIndex = 0;
+
+    function goToSlide(index) {
+      if (index < 0) index = 0;
+      if (index >= slides.length) index = slides.length - 1;
+      currentSlideIndex = index;
+      const targetEl = document.getElementById(slides[index].id);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      updateSlideHud();
+    }
+
+    function nextSlide() {
+      if (currentSlideIndex < slides.length - 1) {
+        goToSlide(currentSlideIndex + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlideIndex > 0) {
+        goToSlide(currentSlideIndex - 1);
+      }
+    }
+
+    function updateSlideHud() {
+      const ind = document.getElementById("slide-hud-text");
+      if (ind) {
+        ind.innerText = `Slide ${currentSlideIndex + 1}/${slides.length} • ${slides[currentSlideIndex].label}`;
+      }
+      const prog = document.getElementById("slide-progress-bar");
+      if (prog) {
+        prog.style.width = `${((currentSlideIndex + 1) / slides.length) * 100}%`;
+      }
     }
 
     // Cypher Workbench tabs
@@ -1631,11 +1786,10 @@ RETURN h, r, e, s.agent_id`
       const statusEl = document.getElementById("sh-chaos-status");
       statusEl.innerText = `Killing agent_${role}...`;
       try {
-        const res = await fetch("/admin/chaos/kill-agent", {
+        const res = await fetch("/showcase/chaos/kill-agent", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer relay-admin-secret-dev-token"
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ tenant: "acme", agent_role: role })
         });
@@ -1761,7 +1915,7 @@ RETURN h, r, e, s.agent_id`
         .attr("markerHeight", 6)
         .attr("orient", "auto")
         .append("path")
-        .attr("fill", "#64748b")
+        .attr("fill", "#94a3b8")
         .attr("d", "M0,-5L10,0L0,5");
 
       graphG = graphSvg.append("g");
@@ -1778,6 +1932,11 @@ RETURN h, r, e, s.agent_id`
       const width = container.clientWidth || 600;
       const height = container.clientHeight || 480;
 
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const linkStroke = isDark ? "#475569" : "#cbd5e1";
+      const textFill = isDark ? "#f8fafc" : "#0f172a";
+      const textHalo = isDark ? "#090d16" : "#ffffff";
+
       const subNodes = demoNodes.filter(n => visibleIds.includes(n.id));
       const subNodeIds = new Set(subNodes.map(n => n.id));
       const subEdges = demoEdges.filter(e => subNodeIds.has(e.source.id || e.source) && subNodeIds.has(e.target.id || e.target));
@@ -1789,8 +1948,8 @@ RETURN h, r, e, s.agent_id`
         .force("collision", d3.forceCollide().radius(24));
 
       const link = graphG.append("g")
-        .attr("stroke", "#475569")
-        .attr("stroke-opacity", 0.6)
+        .attr("stroke", linkStroke)
+        .attr("stroke-opacity", 0.7)
         .selectAll("line")
         .data(subEdges)
         .join("line")
@@ -1806,19 +1965,20 @@ RETURN h, r, e, s.agent_id`
       node.append("circle")
         .attr("r", d => d.type === "Entity" ? 13 : 10)
         .attr("fill", d => demoColorMap[d.memory_type] || '#64748b')
-        .attr("stroke", d => highlightIds.includes(d.id) ? "#f59e0b" : "#ffffff")
+        .attr("stroke", d => highlightIds.includes(d.id) ? "#d97706" : (isDark ? "#1e293b" : "#ffffff"))
         .attr("stroke-width", d => highlightIds.includes(d.id) ? 3.5 : 1.5);
 
       node.append("text")
         .text(d => d.label)
         .attr("x", 14)
         .attr("y", 4)
-        .attr("fill", "#f8fafc")
-        .attr("font-size", "10px")
+        .attr("fill", textFill)
+        .attr("font-size", "11px")
+        .attr("font-weight", "600")
         .attr("font-family", "ui-monospace, monospace")
         .attr("paint-order", "stroke")
-        .attr("stroke", "#090d16")
-        .attr("stroke-width", 3);
+        .attr("stroke", textHalo)
+        .attr("stroke-width", 3.5);
 
       d3Simulation.on("tick", () => {
         link
@@ -1845,10 +2005,62 @@ RETURN h, r, e, s.agent_id`
       renderDemoGraphSubset(baseVisible, stepData.highlight_nodes || []);
     }
 
+    // Keyboard & Scroll Deck Navigation
+    window.addEventListener("keydown", (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+
+      if (e.key === "ArrowRight" || e.key === "PageDown") {
+        const demoEl = document.getElementById("interactive-demo");
+        const rect = demoEl ? demoEl.getBoundingClientRect() : null;
+        const inDemoView = rect && rect.top < window.innerHeight * 0.7 && rect.bottom > window.innerHeight * 0.3;
+        if (inDemoView) {
+          nextDemoStep();
+        } else {
+          nextSlide();
+        }
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        const demoEl = document.getElementById("interactive-demo");
+        const rect = demoEl ? demoEl.getBoundingClientRect() : null;
+        const inDemoView = rect && rect.top < window.innerHeight * 0.7 && rect.bottom > window.innerHeight * 0.3;
+        if (inDemoView) {
+          prevDemoStep();
+        } else {
+          prevSlide();
+        }
+        e.preventDefault();
+      } else if (e.key === "p" || e.key === "P") {
+        togglePresentationMode();
+        e.preventDefault();
+      } else if (e.key === "Escape") {
+        if (document.body.classList.contains("presentation-mode")) {
+          togglePresentationMode();
+        }
+      }
+    });
+
+    window.addEventListener("scroll", () => {
+      const scrollPos = window.scrollY + 220;
+      slides.forEach((s, idx) => {
+        const el = document.getElementById(s.id);
+        if (el) {
+          const top = el.offsetTop;
+          const height = el.offsetHeight;
+          if (scrollPos >= top && scrollPos < top + height) {
+            if (currentSlideIndex !== idx) {
+              currentSlideIndex = idx;
+              updateSlideHud();
+            }
+          }
+        }
+      });
+    });
+
     window.addEventListener("DOMContentLoaded", async () => {
       initDemoGraph();
       await loadShowcaseData();
       startDemoStep(1);
+      updateSlideHud();
     });
   </script>
 </body>

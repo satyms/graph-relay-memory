@@ -538,6 +538,37 @@ async def reclaim_task(req: ReclaimTaskRequest, authorization: Optional[str] = H
 
 
 
+
+@app.post("/showcase/chaos/kill-agent")
+async def showcase_kill_agent(req: KillAgentRequest):
+    """
+    Unauthenticated safe demo proxy for the showcase Chaos Button on demo tenant 'acme'.
+    Never exposes admin secrets to frontend code.
+    """
+    try:
+        graph_name = get_tenant_graph_name("acme")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail={"code": "INVALID", "message": str(e)})
+
+    agent_id = f"agent_{req.agent_role}" if not req.agent_role.startswith("agent_") else req.agent_role
+    held_tasks = get_agent_tasks(graph_name, agent_id)
+
+    broadcast_event("agent_killed", {
+        "tenant": "acme",
+        "agent_id": agent_id,
+        "agent_role": req.agent_role,
+        "held_tasks": held_tasks
+    })
+
+    return {
+        "ok": True,
+        "killed_agent": agent_id,
+        "agent_role": req.agent_role,
+        "tenant": "acme",
+        "held_tasks": held_tasks
+    }
+
+
 @app.get("/showcase/data")
 def get_showcase_data() -> Dict[str, Any]:
     """
